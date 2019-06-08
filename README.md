@@ -24,6 +24,7 @@ Like **`\t`**  unescaping. See below.
    A key : value   // name/value line.     Name is "A key", then comes  "value"
  ' s key :  value  // ' allows for any key. So, " s key" is a name for " value"
      spv :: value  // :: makes leading space more visible to human:    " value" 
+  Имя 键 : Юрий 值 // supports utf-8 encoded unicode and old 8bit "codepages" 
 
  Section : >                        // number of >s tells our depth in the tree.
     spaced :  val & spaces     |.   // |. "guard pragma" keeps tail blanks intact.
@@ -66,10 +67,13 @@ Install package:
 % go get -u github.com/ohir/octok
 ```
 
-Then make symols for tests:
+Then make symbols for tests:
 ```
+% go get -u golang.org/x/tools/cmd/stringer 
 % cd $GOPATH/github.com/ohir/octok
 % go generate
+
+% go test # should build ok
 ```
 
 ### Revisions
