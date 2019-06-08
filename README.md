@@ -24,26 +24,26 @@ Like **`\t`**  unescaping. See below.
    A key : value   // name/value line.     Name is "A key", then comes  "value"
  ' s key :  value  // ' allows for any key. So, " s key" is a name for " value"
      spv :: value  // :: makes leading space more visible to human:    " value" 
-  Имя 键 : Юрий 值 // supports utf-8 encoded unicode and old 8bit "codepages" 
+  Имя 键 : Юрий 值  // supports utf-8 encoded unicode and old 8bit "codepages" 
 
  Section : >                        // number of >s tells our depth in the tree.
-    spaced :  val & spaces     |.   // |. "guard pragma" keeps tail blanks intact.
-    noComm : hello // there    '.   // '. "disa  pragma" makes former // to the Value
-   withCTL : Use\t tab and \n  \.   // \. "unesc pragma" unescapes \t and \n
-    withNL : some value        ^.   // ^. "newline pragma" adds a '\n' at the end.
-    looong : value can span    +.   // +. "join Pragma" joins this line value with
-           :  many lines and   +.   //    next line value 
+    spaced :  val & spaces     |.   //  |  "guard pragma" keeps tail blanks intact.
+    noComm : hello // there    '.   //  '  "disa  pragma" makes former // to the Value
+   withCTL : Use\t tab and \n  \.   //  \  "unesc pragma" unescapes \t and \n
+    withNL : some value        ^.   //  ^  "newline pragma" adds a '\n' at the end.
+    looong : value can span    +.   //  +  "join Pragma" joins this line value with
+           :  many lines and   +.   //      next line value 
            :: still keep indent.    // 
-  SubSec : >>                       // >> go depth 2 subsection
-           : list member  0         //    Ordered (unnamed) values can be indexed 
-           : list member  1         //    naturally by the order of apperance
-       33  : list member 33         //    or with index being given explicit
-           : value                  //    /Section/SubSect[34] = value
-   SSSub : >>>                      // >>> go depth 3 sub-sub section
-       key : value                  //     /Section/SubSect/SSSub/key = value
+  SubSec : >>                       // >>  go depth 2 subsection
+           : list member  0         //     Ordered (unnamed) values can be indexed 
+           : list member  1         //     naturally by the order of apperance
+       33  : list member 33         //     or with index being given explicit
+           : value                  //     /Section/SubSect[34] = value
+   SSSub : >>>                      // >>>  go depth 3 sub-sub section
+       key : value                  //      /Section/SubSect/SSSub/key = value
  OthSect : >                        // Next sect opens. All above tree close.
-       key : value                  //   /OthSect/key = value
-  ' sp key :  value                 // ' allows for any key. Here is " sp key".
+       key : value                  //    /OthSect/key = value
+  ' sp key :  value                 // '  allows for any key. Here is " sp key".
            :: value                 // :: makes leading space more visible. 
 ```
 
@@ -73,7 +73,7 @@ Then make symbols for tests:
 % cd $GOPATH/github.com/ohir/octok
 % go generate
 
-% go test # should build ok
+% go test # should pass ok
 ```
 
 ### Revisions
