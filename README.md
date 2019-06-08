@@ -53,11 +53,6 @@ Like **`\t`**  unescaping. See below.
 
 [Documentation](http://godoc.org/github.com/ohir/octok) is hosted at GoDoc project.
 
-[Linter docs too](http://godoc.org/github.com/ohir/bplint).
-
-[GoConf](https://github.com/ohir/goconf) configuration package internally uses
-this very `octok` tokenizer. 
-
 
 ### Install
 
