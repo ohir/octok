@@ -1,0 +1,6 @@
+[ ] Fix comments to get good godoc reading
+[ ] Explain line pragma handlers. Make example.
+[ ] Explain customizable linter knobs. Make example.
+[ ] Add a benchmark. Possibly with testdata generator.
+[ ] Prepare octok for being a go module
+[ ] 
