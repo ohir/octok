@@ -36,15 +36,15 @@ Like **`\t`**  unescaping. See below.
         33  : list member 33        //     or with index being given explicit
             : value                 //     /Section/SubSect[34] = value
 
-   SSSub : >>>                      // >>>  go depth 3 sub-sub section
-         key : value                //      /Section/SubSect/SSSub/key = value
+   SSSub : >>>                      // >>> go depth 3 sub-sub section
+         key : value                //     /Section/SubSect/SSSub/key = value
 
  OthSect : >                        // Next depth 1 section opens. All above close.
        key : value                  //    /OthSect/key = value
      a key : value                  // spaces in keys are ok.   Here is  "a key".
    ' spkey :  value                 // '  quotes leading space. Here is " spkey".
        Имя : Юрий                   // OConf supports utf-8 encoded unicode
-       键k : v值                    // in full range. [And 8bit "codepages" too].
+       键k : v值                     // in full range. [And 8bit "codepages" too].
 
 ```
 
