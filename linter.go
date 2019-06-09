@@ -126,6 +126,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 					for n := 0; pch > 0; pch >>= 8 {
 						if c == byte(pch&255) {
 							oc.Inpos = p      // let handler know position
+							oc.InLine = ln    // including a line no
 							blenwas := len(b) // we'll check it after
 							b = nil           // release backing array
 							if ok := oc.linePragmas.lpcall[n](c, oc, oc.linePragmas.lpfpar[n]); !ok {

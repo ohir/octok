@@ -128,8 +128,9 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 					for n := 0; pch > 0; pch >>= 8 {
 						if c == byte(pch&255) {
 							blenwas := len(b)
-							oc.Inpos = p // let handler know position
-							b = nil      // don't hold to backing array
+							oc.Inpos = p   // let handler know position
+							oc.InLine = ln // including a line no
+							b = nil        // don't hold to backing array
 							if ok := oc.linePragmas.lpcall[n](c, oc, oc.linePragmas.lpfpar[n]); !ok {
 								oc.BadLint = OcLint{ln, LintBadLnPrag}
 								return false

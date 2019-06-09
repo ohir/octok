@@ -9,6 +9,7 @@ type OcFlat struct {
 	Lapses        []OcLint   // lints found. Filled if LintFull is true.
 	BadLint       OcLint     // why !ok
 	Inpos         int        // parser position - updated on line pragma calls only.
+	InLine        uint32     // pragma call line
 	ItemsExpected uint32     // default 64
 	LapsesFound   uint32     // lints counter, incemented even if LintFull is false
 	LintFull      bool       // register lints. Otherwise just up LapsesFound.
