@@ -44,7 +44,7 @@ Like **`\t`**  unescaping. See below.
      a key : value                  // spaces in keys are ok.   Here is  "a key".
    ' spkey :  value                 // '  quotes leading space. Here is " spkey".
        Имя : Юрий                   // OConf supports utf-8 encoded unicode
-        键 : 值                     // in full range. [And 8bit "codepages" too].
+       键k : v值                     // in full range. [And 8bit "codepages" too].
 
 ```
 
