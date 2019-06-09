@@ -21,30 +21,31 @@ Like **`\t`**  unescaping. See below.
 // line comment can also begin with " # ! (d-quote, sharp and bang) markers.
    free comment lines are possible too - these may not contain ' : ' though.
 
-   A key : value   // name/value line.     Name is "A key", then comes  "value"
- ' s key :  value  // ' allows for any key. So, " s key" is a name for " value"
-     spv :: value  // :: makes leading space more visible to human:    " value" 
-  Имя 键 : Юрий 值  // supports utf-8 encoded unicode and old 8bit "codepages" 
-
- Section : >                        // number of >s tells our depth in the tree.
+ Section : >                        //  >  is a "section" marker and depth indicator. 
     spaced :  val & spaces     |.   //  |  "guard pragma" keeps tail blanks intact.
     noComm : hello // there    '.   //  '  "disa  pragma" makes former // to the Value
    withCTL : Use\t tab and \n  \.   //  \  "unesc pragma" unescapes \t and \n
     withNL : some value        ^.   //  ^  "newline pragma" adds a '\n' at the end.
     looong : value can span    +.   //  +  "join Pragma" joins this line value with
            :  many lines and   +.   //      next line value 
-           :: still keep indent.    // 
-  SubSec : >>                       // >>  go depth 2 subsection
-           : list member  0         //     Ordered (unnamed) values can be indexed 
-           : list member  1         //     naturally by the order of apperance
-       33  : list member 33         //     or with index being given explicit
-           : value                  //     /Section/SubSect[34] = value
+           :: still keep indent.    // ::  separator makes leading space more visible.
+
+  SubSec : >>                       // >>  open subsection at depth 2.
+            : list member  0        //     Ordered (unnamed) values can be indexed 
+            : list member  1        //     naturally by the order of apperance
+        33  : list member 33        //     or with index being given explicit
+            : value                 //     /Section/SubSect[34] = value
+
    SSSub : >>>                      // >>>  go depth 3 sub-sub section
-       key : value                  //      /Section/SubSect/SSSub/key = value
- OthSect : >                        // Next sect opens. All above tree close.
+         key : value                //      /Section/SubSect/SSSub/key = value
+
+ OthSect : >                        // Next depth 1 section opens. All above close.
        key : value                  //    /OthSect/key = value
-  ' sp key :  value                 // '  allows for any key. Here is " sp key".
-           :: value                 // :: makes leading space more visible. 
+     a key : value                  // spaces in keys are ok.   Here is  "a key".
+   ' spkey :  value                 // '  quotes leading space. Here is " spkey".
+       Имя : Юрий                   // OConf supports utf-8 encoded unicode
+        键 : 值                     // in full range. [And 8bit "codepages" too].
+
 ```
 
 [More about OCONF](https://github.com/ohir/oconf-std)
