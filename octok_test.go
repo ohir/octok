@@ -591,19 +591,16 @@ func TestLinterMessages(t *testing.T) {
 	if s := k.String(); !strings.HasPrefix(s, "LintFL(") {
 		t.Errorf("LintUnknown is not the last flag (%d %s is?). Other tests might be wrong!", k, k.String())
 	}
-	if s, ok := LintMessage(k); ok {
+	if s := LintMessage(k); s != "Err!" {
 		t.Errorf("Messed up linter messages table. Should NOT have an entry for %s! Has: %s", k.String(), s)
 	}
-	if s, ok := LintMessage(i); !ok || len(s) < 10 {
+	if s := LintMessage(i); len(s) < len(`Linted OK.`) {
 		t.Errorf("Bad (too short) messages table entry for %s! [%s]", i.String(), s)
 	}
 	for i := LintOK + 1; i <= LintUnknown; i <<= 1 {
-		s, ok := LintMessage(i)
-		if !ok {
-			t.Errorf("Messed up linter messages table. No entry for %s found!", i.String())
-		}
-		if len(s) < 10 {
-			t.Errorf("Too short message for %s ! [%s]", i.String(), s)
+		s := LintMessage(i)
+		if len(s) < len(`Linted OK.`) {
+			t.Errorf("Messed up linter messages table. None, or too short, entry for %s found!", i.String())
 		}
 		t.Logf("@%02d %s => %s", j, i.String(), s) // for -v to see
 		j++

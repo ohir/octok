@@ -132,9 +132,9 @@ const (
 
 // func LintMessage(flag LintFL) returns string, possibly multiline one,
 // with linting results description.
-func LintMessage(l LintFL) (r string, ok bool) {
+func LintMessage(l LintFL) (r string) {
 	var mt = [...]string{
-		`Linted OK.`,
+		`Linted OK.`, // len:10
 		`Unconfirmed pragma spotted. Use '. next time.`,
 		`Pragma other than '. or |. cancelled endline remark.`,
 		`Garbage text (or not marked comment) was skipped.`,
@@ -152,7 +152,7 @@ func LintMessage(l LintFL) (r string, ok bool) {
 		`Test suite sentinel. Keep it at last entry.`,
 	} // yank constants, paste, vselect then: s#^.\+// #`# | '<,'>s#$#`,#
 	if l == 0 {
-		return mt[0], true
+		return mt[0]
 	}
 	nl := " ‣ "
 	for i := 1; l != 0; l >>= 1 {
@@ -164,12 +164,11 @@ func LintMessage(l LintFL) (r string, ok bool) {
 			r += nl + mt[i]
 			nl = "\n ‣ "
 		} else {
-			r += nl + "Err!"
-			return r, false
+			return "Err!"
 		}
 		i++
 	}
-	return r, true
+	return r
 }
 
 // Why not use stringer?
