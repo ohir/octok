@@ -94,6 +94,9 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 				culint |= LintKeyParts
 				continue // more than 3 or part starts at offset > 31
 			}
+			if l.Ns == uint32(p) || int(l.Ns)-lastP == 1 { // dot or space lead
+				continue
+			}
 			if l.Np == 0 { // set sentinel 1. Part can't have offset of 1.
 				l.Np++
 			}
