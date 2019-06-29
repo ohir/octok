@@ -15,37 +15,72 @@ value string if -- and only **if** -- the Value needs some special treatment.
 Like **`\t`**  unescaping. See below.
 
 
-### Sample config in OCONF format:
+### Sample config, annotated. (Copied from OCONF's spec):
 
 ```
 // line comment can also begin with " # ! (d-quote, sharp and bang) markers.
-   free comment lines are possible too - these may not contain ' : ' though.
+ ! free comment lines are possible too - these may not contain ' : ' though.
 
- Section : >                        //  >  is a "section" marker and depth indicator. 
+ ^ Section : ----- section lead --- //  ^  is a "section" marker and depth indicator. 
+ '^ escape : not a section lead     // '   at start makes any key valid and ordinary.
     spaced :  val & spaces     |.   //  |  "guard pragma" keeps tail blanks intact.
     noComm : hello // there    '.   //  '  "disa  pragma" makes former // to the Value
-   withCTL : Use\t tab and \n  \.   //  \  "unesc pragma" unescapes \t and \n
+   withCTL : Use\t tab and \n  \.   //  \  "unesc pragma" unescapes \t, \n, and \xHH
     withNL : some value        ^.   //  ^  "newline pragma" adds a '\n' at the end.
     looong : value can span    +.   //  +  "join Pragma" joins this line value with
            :  many lines and   +.   //      next line value 
            :: still keep indent.    // ::  separator makes leading space more visible.
 
-  SubSec : >>                       // >>  open subsection at depth 2.
+  ^^ SubSec : --------------------- // ^^  open subsection at depth 2 (^^ or ^2 or ^).
             : list member  0        //     Ordered (unnamed) values can be indexed 
             : list member  1        //     naturally by the order of apperance
         33  : list member 33        //     or with index being given explicit
             : value                 //     /Section/SubSect[34] = value
+                                    // 
+   ^^^ SSSub : -------------------- // ^^^ go depth 3 sub-sub section
+         key : value                //     /Section/SubSect/SSSub.key = value
 
-   SSSub : >>>                      // >>> go depth 3 sub-sub section
-         key : value                //     /Section/SubSect/SSSub/key = value
-
- OthSect : >                        // Next depth 1 section opens. All above close.
-       key : value                  //    /OthSect/key = value
+ ^ OthSect : ---------------------- // Next depth 1 section opens. All above close.
+       key : value                  // /OthSect.key = value
      a key : value                  // spaces in keys are ok.   Here is  "a key".
    ' spkey :  value                 // '  quotes leading space. Here is " spkey".
        Имя : Юрий                   // OConf supports utf-8 encoded unicode
        键k : v值                    // in full range. [And 8bit "codepages" too].
 
+ ^^ SubDict : --------------------- // Show other structure constructs. These 
+  dictname { : dict opens           // SHOULD NOT be used in human editable
+        some : value                // configs.
+    listname [ : list opens         // Ordered (unnamed) values can be indexed 
+               : list member 0      // naturally by the order of apperance
+           33  : list member 33     // or with index being given explicit
+               < : anon set opens   // <set> is now at index 34
+                 : with unnamed    
+             and : with named members 
+        deepdict { : even with a dict 
+              deep : value here  // /OthSect/SubDict/listname/34/deepdict/deep/
+                 } : deep dict closes
+               > : set closes
+               : list member 35
+             ] : list closes
+       other : value
+           } : dict closes
+
+ ^^ PGroups : --------------------- // :( Group applies a pragma to many items
+   tx1 ( group pragma ^+.           // Put ^+. on every line till group ends.
+       : many lines may come here
+       :  that keep indent line but
+       :  sometimes need to be disa
+       : mbiguated for // or ?.     '.
+       ) group ends
+
+  tx2 := raw lines follow             
+       Now multiline text can span many lines until 
+       Disambiguated group can not be indented though, so all these
+       lines start with 7 spaces now.
+       Beware! line pragmas (like dot-include) still may work in the
+       grouped 'free' text, as line-pragmas might be recognized
+       out-of-band or even before parsing.
+      :- // raw lines block ends
 ```
 
 [More about OCONF](https://github.com/ohir/oconf-std)
@@ -74,7 +109,8 @@ Then make symbols for tests:
 
 ### Revisions
 
-  - v1.0.0 - first public release
+  - v1.0.0 - public release
+  - noversion, based on an old C/perl code.
 
 
 ### License

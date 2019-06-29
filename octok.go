@@ -19,21 +19,22 @@ package octok
 // true), the OcFlat.Lapses table is filled. Otherwise, spotted lapses are
 // simply counted in the OcFlat.LapsesFound counter.
 func (oc *OcFlat) Tokenize() (ok bool) {
-	var nowStage, fromStage pStage   // parse stages
-	var afterS, lastP int            // position markers
-	var culint LintFL                // current line lint flags
-	var ln uint32 = 1                // current line №
-	var items []OcItem               // items found
-	var lapses []OcLint              // ambigous found
-	var b []byte = oc.Inbuf[:]       // buffer to parse
-	var p int                        // position in buffer
-	var c byte                       // current char at p
-	var l OcItem                     // current parses
-	var gotSep, gotItem, gotCom bool // separator seen, new Item, Comment
-	noTypes := oc.NoTypes            // wholesale knobs
-	withMet := !oc.NoMetas           // localize
-	lint := oc.LintFull              // fill lapses table
-	linC := oc.linePragmas.lpchar    // line pragmas table
+	var nowStage, fromStage pStage // parse stages
+	var afterS, lastP int          // position markers
+	var culint LintFL              // current line lint flags
+	var ln uint32 = 1              // current line №
+	var items []OcItem             // items found
+	var lapses []OcLint            // ambigous found
+	var b []byte = oc.Inbuf[:]     // buffer to parse
+	var p int                      // position in buffer
+	var c byte                     // current char at p
+	var l OcItem                   // current parses
+	var gotSep, gotItem bool       // separator seen, new Item
+	var gotQuote, gotCom bool      // ordinary key, Comment
+	noTypes := oc.NoTypes          // wholesale knobs
+	withMet := !oc.NoMetas         // localize
+	lint := oc.LintFull            // fill lapses table
+	linC := oc.linePragmas.lpchar  // line pragmas table
 
 	blen := len(b)                 // buflen is used more than once
 	if blen < 2 || blen > u32max { // nothing to parse, or too much
@@ -90,6 +91,16 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 				l.Ve = 0 // no pragmas in remark allowed
 			}
 		case inName: // split name on dots and spaces
+			if !gotQuote && isStructure(c) {
+				l.Fl |= IsSpec
+				lastP = p
+				for c == b[p] {
+					p++
+				}
+				p--
+				afterS = p
+				c = '^'
+			}
 			if l.Np&NpOverParts != 0 || p-int(l.Ns) > 31 {
 				culint |= LintKeyParts
 				continue // more than 3 or part starts at offset > 31
@@ -101,9 +112,12 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 				l.Np++
 			}
 			l.Np <<= 5
-			if c == '.' {
+			switch c {
+			case '.':
 				l.Np |= uint16(p - int(l.Ns) + 1)
-			} else {
+			case '^':
+				l.Np |= uint16(lastP - int(l.Ns))
+			default:
 				l.Np |= uint16(p - int(l.Ns))
 			}
 		case lpCheck: // first non space in a line gets here
@@ -117,8 +131,15 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 				l.Ns = uint32(p + 1)
 				nowStage = inName
 				gotItem = true
+				gotQuote = true
 				continue
+			case isStructure(c):
+				l.Fl |= IsSpec
+				fallthrough
 			case c > 0x2f: // Got to name's first
+				if c < 0x3a && c > 0x2f { // ascii digit
+					l.Fl |= IsOrd
+				}
 				l.Ns = uint32(p)
 				nowStage = inName
 				gotItem = true
@@ -130,10 +151,10 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 					pch := linC
 					for n := 0; pch > 0; pch >>= 8 {
 						if c == byte(pch&255) {
-							blenwas := len(b)
-							oc.Inpos = p   // let handler know position
-							oc.InLine = ln // including a line no
-							b = nil        // don't hold to backing array
+							oc.Inpos = p      // let handler know position
+							oc.InLine = ln    // including a line no
+							blenwas := len(b) // we'll check it after
+							b = nil           // don't hold to backing array
 							if ok := oc.linePragmas.lpcall[n](c, oc, oc.linePragmas.lpfpar[n]); !ok {
 								oc.BadLint = OcLint{ln, LintBadLnPrag}
 								return false
@@ -221,6 +242,7 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 			if l.Ne == l.Ns { // adjust from ' forced name
 				l.Fl |= IsOrd
 			}
+
 			var i uint32
 			var disa, guard bool
 			if l.Ve > 0 { // Ve is set at first / of // remark
@@ -350,20 +372,7 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 			c = b[l.Vs]
 			if l.Vs == l.Ve {
 				l.Fl |= IsEmpty
-			} else if !disa && isValueSpecial(c) &&
-				(c == '>' || l.Ve-l.Vs == 1) { // isSpecial?
-				if l.Ve-l.Vs == 1 {
-					l.Fl |= IsSpec
-				} else { // check for section >>>
-					for i := l.Vs + 1; c == '>' && i < l.Ve; i++ {
-						c = b[i]
-					}
-					if c == '>' && i+1 == l.Ve {
-						l.Fl |= IsSpec
-					}
-				}
 			}
-
 			if disa {
 				culint &^= LintRemCancel
 			}
@@ -391,11 +400,15 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 	return true
 } // func (oc *Flat) Tokenize (ok bool)
 
-// func isValueSpecial checks if c is an Oconf's structure bracket.
+// func isStructure checks if c is an Oconf's structure bracket.
 // This function is supposed to be inlined by the compiler.
-func isValueSpecial(c byte) bool { // > [] () {} <
-	return c == '>' || c == '[' || c == ']' || c == '(' ||
-		c == ')' || c == '{' || c == '}' || c == '<' // 8 tests to fail
+func isStructure(c byte) bool { // > [] () {} < = - ^
+	return c == '^' || // section
+		c == '[' || c == ']' || // list
+		c == '(' || c == ')' || // group
+		c == '{' || c == '}' || // dict
+		c == '<' || c == '>' // || // set
+	// 9 tests to fail
 }
 
 // func isPragmaChar checks if c is a pragma including meta brackets.

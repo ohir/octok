@@ -352,8 +352,8 @@ func TestPragmaCall(t *testing.T) {
 	}
 }
 
-func TestTokenize(t *testing.T) {
-	//func TestXXX(t *testing.T) {
+//func TestTokenize(t *testing.T) {
+func TestXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
 	var erta []string
@@ -576,9 +576,9 @@ func TestRangeChecks(t *testing.T) {
 		}
 	}
 	for c := byte(1); c != 0; c++ {
-		tok, lint := isValueSpecial(c), isValueSpecLint(c, &oc)
+		tok, lint := isStructure(c), isStructureLint(c, &oc)
 		if tok != lint {
-			t.Errorf("[%02x] isValueSpecial Tok:%v != Lint(%v)\n", c, tok, lint)
+			t.Errorf("[%02x] isStructure Tok:%v != Lint(%v)\n", c, tok, lint)
 		}
 	}
 	// isValueSpecLint

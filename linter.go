@@ -8,27 +8,22 @@ package octok
 // method, its linting is fully customizable, ie. it allows to restrict
 // set of value pragmas to exact subset used by a particular implementation;
 // possibly by an implementation in a language other than Go.
-
-// func TokenizeLint is a reference tokenizer and linter.
-// Unlike Tokenize method, its linting is fully customizable,
-// ie. it allows to restrict set of value pragmas to exact subset used
-// by a particular implementation; possibly by an implementation in a language
-// other than Go.
 func TokenizeLint(oc *OcFlat) (ok bool) {
-	var nowStage, fromStage pStage   // parse stages
-	var afterS, lastP int            // position markers
-	var culint LintFL                // current line ambigs
-	var ln uint32 = 1                // current line №
-	var items []OcItem               // items found
-	var lapses []OcLint              // ambigs found
-	var b []byte = oc.Inbuf[:]       // buffer to parse
-	var p int                        // position in buffer
-	var c byte                       // current char at p
-	var l OcItem                     // current parses
-	var gotSep, gotItem, gotCom bool // separator seen, new Item, Comment
-	noTypes := oc.NoTypes            // wholesale knobs
-	withMet := !oc.NoMetas           //
-	linC := oc.linePragmas.lpchar    // line pragmas table
+	var nowStage, fromStage pStage // parse stages
+	var afterS, lastP int          // position markers
+	var culint LintFL              // current line ambigs
+	var ln uint32 = 1              // current line №
+	var items []OcItem             // items found
+	var lapses []OcLint            // ambigs found
+	var b []byte = oc.Inbuf[:]     // buffer to parse
+	var p int                      // position in buffer
+	var c byte                     // current char at p
+	var l OcItem                   // current parses
+	var gotSep, gotItem bool       // separator seen, new Item
+	var gotQuote, gotCom bool      // ordinary key, Comment
+	noTypes := oc.NoTypes          // wholesale knobs
+	withMet := !oc.NoMetas         //
+	linC := oc.linePragmas.lpchar  // line pragmas table
 
 	blen := len(b)                 // buflen is used more than once
 	if blen < 2 || blen > u32max { // nothing to parse, or too much
@@ -42,7 +37,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 		oc.Pck = pragmaChars
 		oc.Tck = typeChars
 		oc.Mck = metaChars
-		oc.Sck = specVaChars
+		oc.Sck = specKeChars
 	}
 
 	for ; p < blen; p++ {
@@ -88,6 +83,16 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				l.Ve = 0 // no pragmas in remark allowed
 			}
 		case inName: // split name on dots and spaces
+			if !gotQuote && isStructureLint(c, oc) {
+				l.Fl |= IsSpec
+				lastP = p
+				for c == b[p] {
+					p++
+				}
+				p--
+				afterS = p
+				c = '^'
+			}
 			if l.Np&NpOverParts != 0 || p-int(l.Ns) > 31 {
 				culint |= LintKeyParts
 				continue // more than 3 or part starts at offset > 31
@@ -99,9 +104,12 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				l.Np++
 			}
 			l.Np <<= 5
-			if c == '.' {
+			switch c {
+			case '.':
 				l.Np |= uint16(p - int(l.Ns) + 1)
-			} else {
+			case '^':
+				l.Np |= uint16(lastP - int(l.Ns))
+			default:
 				l.Np |= uint16(p - int(l.Ns))
 			}
 		case lpCheck: // first non space in a line gets here
@@ -115,8 +123,15 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				l.Ns = uint32(p + 1)
 				nowStage = inName
 				gotItem = true
+				gotQuote = true
 				continue
+			case isStructureLint(c, oc):
+				l.Fl |= IsSpec
+				fallthrough
 			case c > 0x2f: // Got to name's first
+				if c < 0x3a && c > 0x2f { // ascii digit
+					l.Fl |= IsOrd
+				}
 				l.Ns = uint32(p)
 				nowStage = inName
 				gotItem = true
@@ -164,6 +179,10 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 		case ckSEP:
 			c = b[p+1]
 			switch {
+			case isStructure(c):
+				l.Fl |= IsSpec
+				l.Vs = uint32(p + 1)
+				break
 			case c < 0x20, blen-p < 4: // got empty value
 				l.Vs = uint32(p + 1) // blen-p: 3210  43210  543210
 				l.Ve = uint32(p + 1) // buffer:  :⬩$   : ⬩$   : .⬩$
@@ -345,18 +364,6 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			c = b[l.Vs]
 			if l.Vs == l.Ve {
 				l.Fl |= IsEmpty
-			} else if !disa && isValueSpecLint(c, oc) &&
-				(c == '>' || l.Ve-l.Vs == 1) { // isSpecial?
-				if l.Ve-l.Vs == 1 {
-					l.Fl |= IsSpec
-				} else { // check for section >>>
-					for i := l.Vs + 1; c == '>' && i < l.Ve; i++ {
-						c = b[i]
-					}
-					if c == '>' && i+1 == l.Ve {
-						l.Fl |= IsSpec
-					}
-				}
 			}
 			if disa {
 				culint &^= LintRemCancel
@@ -368,8 +375,6 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			items = append(items, l) // store item
 			l = OcItem{}
 			ln++
-			// default:
-			//	culint |= LintUnknown // badChar check instead
 		}
 	}
 	oc.Items = items
@@ -382,7 +387,10 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 	return true
 } // func TokenizeLint(oc *Parser) (ok bool)
 
-func isValueSpecLint(c byte, oc *OcFlat) bool {
+func isStructureLint(c byte, oc *OcFlat) bool {
+	if c == '^' { // section always
+		return true
+	}
 	i := oc.Sck
 	for ; i > 0; i >>= 8 {
 		if c == byte(i) {
