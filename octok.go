@@ -19,22 +19,24 @@ package octok
 // true), the OcFlat.Lapses table is filled. Otherwise, spotted lapses are
 // simply counted in the OcFlat.LapsesFound counter.
 func (oc *OcFlat) Tokenize() (ok bool) {
-	var nowStage, fromStage pStage // parse stages
-	var afterS, lastP int          // position markers
-	var culint LintFL              // current line lint flags
-	var ln uint32 = 1              // current line №
-	var items []OcItem             // items found
-	var lapses []OcLint            // ambigous found
-	var b []byte = oc.Inbuf[:]     // buffer to parse
-	var p int                      // position in buffer
-	var c byte                     // current char at p
-	var l OcItem                   // current parses
-	var gotSep, gotItem bool       // separator seen, new Item
-	var gotQuote, gotCom bool      // ordinary key, Comment
-	noTypes := oc.NoTypes          // wholesale knobs
-	withMet := !oc.NoMetas         // localize
-	lint := oc.LintFull            // fill lapses table
-	linC := oc.linePragmas.lpchar  // line pragmas table
+	var nowStage, fromStage pStage   // parse stages
+	var afterS, lastP int            // position markers
+	var culint LintFL                // current line lint flags
+	var ln uint32 = 1                // current line №
+	var items []OcItem               // items found
+	var lapses []OcLint              // ambigous found
+	var b []byte = oc.Inbuf[:]       // buffer to parse
+	var p int                        // position in buffer
+	var c byte                       // current char at p
+	var l OcItem                     // current parses
+	var rawB uint64                  // raw boundary
+	var gotSep, gotItem, gotRaw bool // separator seen, new Item, raw
+	var gotQuote, gotCom bool        // ordinary key, Comment
+	noTypes := oc.NoTypes            // wholesale knobs
+	rawThre := oc.RawThreshold       // 0 allows for binary raw, 255 off
+	withMet := !oc.NoMetas           // localize
+	lint := oc.LintFull              // fill lapses table
+	linC := oc.linePragmas.lpchar    // line pragmas table
 
 	blen := len(b)                 // buflen is used more than once
 	if blen < 2 || blen > u32max { // nothing to parse, or too much
@@ -190,16 +192,19 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 			case c < 0x20, blen-p < 4: // got empty value
 				l.Vs = uint32(p + 1) // blen-p: 3210  43210  543210
 				l.Ve = uint32(p + 1) // buffer:  :⬩$   : ⬩$   : .⬩$
+				break                //                       := S$
+			case c == '=' && b[p+2] == '=' &&
+				b[p+3] < 0x21 && oc.AllowRaw: // here blen-p >= 4
+				gotRaw = true
+				l.Vs = uint32(p + 1)
 				break
-			case c != 0x20 && c != ':':
-				fallthrough
-			default:
-				nowStage = fromStage
-				continue // not a separator
 			case c == 0x20,
 				c == ':' && b[p+2] == ' ':
 				l.Vs = uint32(p + 2)
 				break
+			default:
+				nowStage = fromStage
+				continue // not a separator
 			}
 			if nowStage == lpCheck { // ORD item
 				l.Ne = uint32(p)
@@ -376,6 +381,53 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 			if disa {
 				culint &^= LintRemCancel
 			}
+			if gotRaw {
+				gotRaw = false
+				if l.Vs != l.Ve && l.Ve-l.Vs > 10 {
+					for i := uint32(3); i < 11; i++ {
+						rawB <<= 8
+						rawB |= uint64(b[l.Vs+i])
+					}
+				} else {
+					rawB = rawBoundary
+				}
+				var x uint64
+				g := p + 1 // b[p]==0x10 ???
+				for g < blen {
+					c = b[g]
+					switch {
+					case c == 0x0a:
+						ln++
+					case c == 0x0d:
+					case c < rawThre:
+						oc.LapsesFound++
+						oc.BadLint = OcLint{ln, LintCtlChars}
+						return false
+					}
+					x <<= 8
+					x |= uint64(c)
+					if x == rawB {
+						g -= 7
+						break
+					}
+					g++
+				}
+				if blen-g < 8 { // no boundary found, FATAL
+					oc.LapsesFound++
+					oc.BadLint = OcLint{ln, LintNoBoundary}
+					return false
+				}
+				l.Vs = uint32(p) + 1
+				l.Ve = uint32(g)
+				for g < blen { // move to the next line
+					if b[g] == 0x0a {
+						ln++
+						p = g
+						break
+					}
+					g++
+				}
+			} // if gotRaw block
 			if culint != 0 { // store linted
 				oc.LapsesFound++ // take note
 				if lint {

@@ -12,7 +12,9 @@ type OcFlat struct {
 	InLine        uint32     // pragma call line
 	ItemsExpected uint32     // default 64
 	LapsesFound   uint32     // lints counter, incemented even if LintFull is false
+	RawThreshold  byte       // 0 allows for binary raw, 255 off
 	LintFull      bool       // register lints. Otherwise just up LapsesFound.
+	AllowRaw      bool       // allow raw values
 	NoTypes       bool       // disallow all type chars: - * ~ , $ # ? "
 	NoMetas       bool       // disallow all metas:  @…; =…/ (…) […] {…} <…>
 	Pck           uint64     // reference linter must be configurable
@@ -132,6 +134,7 @@ const (
 	LintKeyParts   LintFL = (1 << iota) >> 1 // Name has more than 4 parts or last part starts too far (>31).
 	LintBadEndLin  LintFL = (1 << iota) >> 1 // No NL at the end of buffer. Last line had not registered.
 	LintBadBufLen  LintFL = (1 << iota) >> 1 // Buffer is too short or too long to parse.
+	LintNoBoundary LintFL = (1 << iota) >> 1 // RawEnd boundary could NOT be found!
 	LintUnknown    LintFL = (1 << iota) >> 1 // Test suite sentinel. Keep it at last entry.
 )
 
@@ -157,6 +160,7 @@ func LintMessage(l LintFL) (r string) {
 		`Name has more than 4 parts or last part starts too far (>31).`,
 		`No NL at the end of buffer. Last line had not registered.`,
 		`Buffer is too short or too long to parse.`,
+		`RawEnd boundary could NOT be found!`,
 		`Test suite sentinel. Keep it at last entry.`,
 	} // yank constants, paste, vselect then: s#^.\+// #`# | '<,'>s#$#`,#
 	if l == 0 {
@@ -266,6 +270,7 @@ const (
 	metaChars   uint64 = 0x00007d295d3e2f3b // } ) ] > / ;
 	specKeChars uint64 = 0x7b7d28293c3e5b5d // {} () <> []
 	specSetupCk uint64 = 0x000000007d295d3e // } ) ] >
+	rawBoundary uint64 = 0x3d3d526177456e64 // ==RawEnd
 )
 
 const u32max = (1 << 32) - 1

@@ -375,6 +375,10 @@ func TestXXX(t *testing.T) {
 			t.Logf("Warning!\n!desc is set on %d '%s'. This test was skipped!", tn, tv.desc)
 			continue
 		}
+		if tv.desc[0] == '-' { // thats the end
+			t.Logf("Warning!\n-desc is set on %d '%s'. All other tests were skipped!", tn, tv.desc)
+			break
+		}
 		if len(tv.from) != len(tv.mock) {
 			t.Errorf("Bad test %d '%s'", tn, tv.desc)
 		}
@@ -385,6 +389,8 @@ func TestXXX(t *testing.T) {
 			t.Errorf("Bad 'from' in %d '%s' [%s]", tn, tv.desc, rerr)
 		}
 		oc.LintFull = true
+		oc.AllowRaw = true
+		oc.RawThreshold = 0x20 // no control
 		ok = oc.Tokenize()
 		if !ok {
 			rerr = oc.BadLint.What.StrAll()

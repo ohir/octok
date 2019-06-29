@@ -41,6 +41,7 @@ package octok
 // Desc: Describe test. First char may instruct testing:
 //       @ - this is the last test to perform.
 //       ! - skip this one test.
+//       - - skip this andd all further tests (Bad parses exit early)
 //       ^ - use ^ as NL mark instead of $. Can be given after @ too.
 // pRes: ParseNone - no parse result is expected. Errs if anything parsed.
 //       ParseOK   - check first and only item.
@@ -50,7 +51,7 @@ package octok
 //23456789¹123456789²123456789³123456789⁴123456789⁵123456789⁶123456789⁷1234567
 // C&P markers/fillers:  · И и Ш ш : ‾ ↦ ↤ ↳ ↲ : ＿ Ｎ ｎ Ｖ ｖ : 𝜋 𝑁  𝑛 𝑉 𝑣
 // change flag +/- 1 to fail and you can see how a given test string parsed
-var ttableFirstItem = 55        // sync it for accurate test error messages
+var ttableFirstItem = 56        // sync it for accurate test error messages
 var tokTestTable = []ptestItem{ // desc, Fl, Tt, Np, pResult / from / mock
 	{`^Utf8 Supermix with two rems and two metas`, NextCont | Backtick, 0x00, 0x0000, LintOK, Parsed2,
 		"k : v //rem ^  🁩λϕ🂊🁾Σbuξ℉⇶av⸨ : ⸩𐌓ar𐌕ó𐌁𐌅兄 `+@内ꜸԳՔЖ№;<żó丶ć>. //remarkø",
@@ -436,6 +437,27 @@ var tokTestTable = []ptestItem{ // desc, Fl, Tt, Np, pResult / from / mock
 	{`escaped Section 5`, IsEmpty, 0x00, 0x0026, LintOK, ParseOK,
 		"'>>>>> Section5 :$",
 		"'N            n :^"},
+	{`raw short boundary is default`, IsOrd, 0x00, 0x0000, LintOK, ParseOK,
+		":== ==RawEn  $  # some other things ==RawEnd after$  ",
+		":          ^  V                    v                 "},
+	{`raw after should get to next NL`, NoneF, 0x00, 0x0000, LintOK, Parsed2,
+		":== ==RawEND  $  # some other things ==RawEND after$ nam : val$",
+		":                                                    N n : V v^"},
+	{`raw value bad`, IsOrd, 0x00, 0x0000, LintNoBoundary, ParseNone,
+		" :==$n : v$",
+		" :Vv n : v^"},
+	{`raw value intro`, IsOrd | IsEmpty, 0x00, 0x0000, LintNoBoundary, ParseNone,
+		":== ==RawEne  $  # some other things ==RawEnd some other here $",
+		":V         v^                                                  "},
+	{`shortest ord + no NL tail`, IsOrd | IsEmpty, 0x00, 0x0000, LintBadEndLin, ParseNone,
+		":$  name :== value     ",
+		":^                     "},
+	{`raw value intro`, IsOrd, 0x00, 0x0000, LintOK, ParseOK,
+		":== ==RawEne  $#123some other things ==RawEne some other here $",
+		":           ^  V                    v                          "},
+	{`raw value tab is bad`, IsOrd, 0x00, 0x0000, LintCtlChars, ParseNone,
+		":== ==RawEne  $#12!some other things ==RawEne some other here $",
+		":           ^  V                    v                          "},
 }
 
 type ptestItem struct {
