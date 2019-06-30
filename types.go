@@ -268,8 +268,6 @@ const (
 	pragmaChars uint64 = 0x5f60255c2b5e7c27 // _ ` % \ + ^ | '
 	typeChars   uint64 = 0x2d2a7e2c24233f22 // - * ~ , $ # ? "
 	metaChars   uint64 = 0x00007d295d3e2f3b // } ) ] > / ;
-	specKeChars uint64 = 0x7b7d28293c3e5b5d // {} () <> []
-	specSetupCk uint64 = 0x000000007d295d3e // } ) ] >
 	rawBoundary uint64 = 0x3d3d526177456e64 // ==RawEnd
 )
 

@@ -238,8 +238,8 @@ func TestLinterRestricted(t *testing.T) {
 	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])|", "])"}); ok {
 		t.Errorf("Bad. Linter setup succeeded while it should NOT! (| in metas set)")
 	}
-	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", ";)"}); ok {
-		t.Errorf("Bad. Linter setup succeeded while it should NOT! (; in Vspecials set)")
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "-+a"}); ok {
+		t.Errorf("Bad. Linter setup succeeded while it should NOT! (letter in Vspecials set)")
 	}
 }
 
@@ -352,8 +352,8 @@ func TestPragmaCall(t *testing.T) {
 	}
 }
 
-//func TestTokenize(t *testing.T) {
-func TestXXX(t *testing.T) {
+func TestTokenize(t *testing.T) {
+	// func TestXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
 	var erta []string
@@ -494,6 +494,8 @@ func TestTokenizeLint(t *testing.T) {
 			t.Errorf("Bad 'from' in %d '%s' [%s]", tn, tv.desc, rerr)
 		}
 		oc.LintFull = true
+		oc.AllowRaw = true
+		oc.RawThreshold = 0x20 // no control
 		ok = TokenizeLint(&oc)
 		if !ok {
 			rerr = oc.BadLint.What.StrAll()

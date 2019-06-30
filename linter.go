@@ -9,21 +9,23 @@ package octok
 // set of value pragmas to exact subset used by a particular implementation;
 // possibly by an implementation in a language other than Go.
 func TokenizeLint(oc *OcFlat) (ok bool) {
-	var nowStage, fromStage pStage // parse stages
-	var afterS, lastP int          // position markers
-	var culint LintFL              // current line ambigs
-	var ln uint32 = 1              // current line №
-	var items []OcItem             // items found
-	var lapses []OcLint            // ambigs found
-	var b []byte = oc.Inbuf[:]     // buffer to parse
-	var p int                      // position in buffer
-	var c byte                     // current char at p
-	var l OcItem                   // current parses
-	var gotSep, gotItem bool       // separator seen, new Item
-	var gotQuote, gotCom bool      // ordinary key, Comment
-	noTypes := oc.NoTypes          // wholesale knobs
-	withMet := !oc.NoMetas         //
-	linC := oc.linePragmas.lpchar  // line pragmas table
+	var nowStage, fromStage pStage   // parse stages
+	var afterS, lastP int            // position markers
+	var culint LintFL                // current line ambigs
+	var ln uint32 = 1                // current line №
+	var items []OcItem               // items found
+	var lapses []OcLint              // ambigs found
+	var b []byte = oc.Inbuf[:]       // buffer to parse
+	var p int                        // position in buffer
+	var c byte                       // current char at p
+	var l OcItem                     // current parses
+	var rawB uint64                  // raw boundary
+	var gotSep, gotItem, gotRaw bool // separator seen, new Item, raw
+	var gotQuote, gotCom bool        // ordinary key, Comment
+	noTypes := oc.NoTypes            // wholesale knobs
+	rawThre := oc.RawThreshold       // 0 allows for binary raw, 255 off
+	withMet := !oc.NoMetas           //
+	linC := oc.linePragmas.lpchar    // line pragmas table
 
 	blen := len(b)                 // buflen is used more than once
 	if blen < 2 || blen > u32max { // nothing to parse, or too much
@@ -37,7 +39,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 		oc.Pck = pragmaChars
 		oc.Tck = typeChars
 		oc.Mck = metaChars
-		oc.Sck = specKeChars
+		// oc.Sck = 0
 	}
 
 	for ; p < blen; p++ {
@@ -179,23 +181,22 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 		case ckSEP:
 			c = b[p+1]
 			switch {
-			case isStructure(c):
-				l.Fl |= IsSpec
-				l.Vs = uint32(p + 1)
-				break
 			case c < 0x20, blen-p < 4: // got empty value
 				l.Vs = uint32(p + 1) // blen-p: 3210  43210  543210
 				l.Ve = uint32(p + 1) // buffer:  :⬩$   : ⬩$   : .⬩$
 				break
-			case c != 0x20 && c != ':':
-				fallthrough
-			default:
-				nowStage = fromStage
-				continue // not a separator
+			case c == '=' && b[p+2] == '=' &&
+				b[p+3] < 0x21 && oc.AllowRaw: // here blen-p >= 4
+				gotRaw = true
+				l.Vs = uint32(p + 1)
+				break
 			case c == 0x20,
 				c == ':' && b[p+2] == ' ':
 				l.Vs = uint32(p + 2)
 				break
+			default:
+				nowStage = fromStage
+				continue // not a separator
 			}
 			if nowStage == lpCheck { // ORD item
 				l.Ne = uint32(p)
@@ -368,6 +369,53 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			if disa {
 				culint &^= LintRemCancel
 			}
+			if gotRaw {
+				gotRaw = false
+				if l.Vs != l.Ve && l.Ve-l.Vs > 10 {
+					for i := uint32(3); i < 11; i++ {
+						rawB <<= 8
+						rawB |= uint64(b[l.Vs+i])
+					}
+				} else {
+					rawB = rawBoundary
+				}
+				var x uint64
+				g := p + 1 // b[p]==0x10 ???
+				for g < blen {
+					c = b[g]
+					switch {
+					case c == 0x0a:
+						ln++
+					case c == 0x0d:
+					case c < rawThre:
+						oc.LapsesFound++
+						oc.BadLint = OcLint{ln, LintCtlChars}
+						return false
+					}
+					x <<= 8
+					x |= uint64(c)
+					if x == rawB {
+						g -= 7
+						break
+					}
+					g++
+				}
+				if blen-g < 8 { // no boundary found, FATAL
+					oc.LapsesFound++
+					oc.BadLint = OcLint{ln, LintNoBoundary}
+					return false
+				}
+				l.Vs = uint32(p) + 1
+				l.Ve = uint32(g)
+				for g < blen { // move to the next line
+					if b[g] == 0x0a {
+						ln++
+						p = g
+						break
+					}
+					g++
+				}
+			} // if gotRaw block
 			if culint != 0 { // store linted
 				lapses = append(lapses, OcLint{ln, culint})
 				culint = 0
@@ -388,10 +436,14 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 } // func TokenizeLint(oc *Parser) (ok bool)
 
 func isStructureLint(c byte, oc *OcFlat) bool {
-	if c == '^' { // section always
+	if c == '^' || c == '@' || // section always
+		c == '(' || c == ')' || // group
+		c == '[' || c == ']' || // list
+		c == '{' || c == '}' || // dict
+		c == '<' || c == '>' { //  set
 		return true
 	}
-	i := oc.Sck
+	i := oc.Sck // additional structure|special chars
 	for ; i > 0; i >>= 8 {
 		if c == byte(i) {
 			break
@@ -428,9 +480,11 @@ func lintIsPragmaChar(c byte, withmeta bool, oc *OcFlat) bool {
 
 // Funtion LinterSetup prepares linter to recognize as valid only pragma
 // character sets given in LinterPragmaChars struct. It does not allow
-// for free changing the sets, but allows for restricting them. If any of
-// provided strings contains a character that is not in the FULL set for a
-// category LinterSetup will return false.
+// for free changing the pragma sets, but allows for restricting them.
+// If any of provided strings contains a pragma or meta character that
+// is not in the FULL set for a category LinterSetup will return false.
+// The special (structure) keys can be enhanced with up to 8 characters
+// as an addition to the always recognized ten: ( [ { < ^ @ > } ] ).
 func LinterSetup(oc *OcFlat, cs LinterPragmaChars) (ok bool) {
 	// configure reference linter/tokenizer
 	for _, c := range []byte(cs.P) { // Pragmas string
@@ -472,23 +526,15 @@ func LinterSetup(oc *OcFlat, cs LinterPragmaChars) (ok bool) {
 		oc.Mck <<= 8
 		oc.Mck |= uint64(c)
 	}
-	for _, c := range []byte(cs.S) { // Spec Val string. ENDING } ) ] >
-		i := specSetupCk
-		for ; i > 0; i >>= 8 {
-			if c == byte(i) {
-				break
-			}
-		}
-		if i == 0 {
-			return
+	if len(cs.S) > 8 { // up to eight additional specials
+		return false
+	}
+	for _, c := range []byte(cs.S) { // User added special key chars.
+		if c|0x20 > 0x60 && c|0x20 < 0x7b { // no letters
+			return false
 		}
 		oc.Sck <<= 8
 		oc.Sck |= uint64(c)
-		if c == 0x29 { // )
-			c++
-		}
-		oc.Sck <<= 8
-		oc.Sck |= uint64(c - 2)
 	}
 	return true
 }

@@ -454,13 +454,13 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 
 // func isStructure checks if c is an Oconf's structure bracket.
 // This function is supposed to be inlined by the compiler.
-func isStructure(c byte) bool { // > [] () {} < = - ^
-	return c == '^' || // section
-		c == '[' || c == ']' || // list
+func isStructure(c byte) bool { // ^ @ () [] {} <>
+	return c == '^' || c == '@' || // section, model section
 		c == '(' || c == ')' || // group
+		c == '[' || c == ']' || // list
 		c == '{' || c == '}' || // dict
-		c == '<' || c == '>' // || // set
-	// 9 tests to fail
+		c == '<' || c == '>' //    set
+	// 10 tests to fail
 }
 
 // func isPragmaChar checks if c is a pragma including meta brackets.
