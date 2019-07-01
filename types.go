@@ -12,9 +12,8 @@ type OcFlat struct {
 	InLine        uint32     // pragma call line
 	ItemsExpected uint32     // default 64
 	LapsesFound   uint32     // lints counter, incemented even if LintFull is false
-	RawThreshold  byte       // 0 allows for binary raw, 255 off
 	LintFull      bool       // register lints. Otherwise just up LapsesFound.
-	AllowRaw      bool       // allow raw values
+	AllowBinRaw   bool       // allow binary raw values, otherwise just \t\n\r\del
 	NoTypes       bool       // disallow all type chars: - * ~ , $ # ? "
 	NoMetas       bool       // disallow all metas:  @…; =…/ (…) […] {…} <…>
 	Pck           uint64     // reference linter must be configurable
@@ -112,7 +111,7 @@ const ( // ItemFlags
 	Unescape ItemFL = 16  // \. pragma sets this.
 	Backtick ItemFL = 32  // `. pragma sets this.
 	IsSpec   ItemFL = 64  // Name starts with a character of >[({})]< set
-	Modified ItemFL = 128 // User code can flag an item as externally modified.
+	IsIndex  ItemFL = 128 // Name starts with an ascii digit
 )
 
 // Linter recognized ambigous constructs are given as err-flags.

@@ -9,27 +9,28 @@ package octok
 // set of value pragmas to exact subset used by a particular implementation;
 // possibly by an implementation in a language other than Go.
 func TokenizeLint(oc *OcFlat) (ok bool) {
-	var nowStage, fromStage pStage   // parse stages
-	var afterS, lastP int            // position markers
-	var culint LintFL                // current line ambigs
-	var ln uint32 = 1                // current line №
-	var items []OcItem               // items found
-	var lapses []OcLint              // ambigs found
-	var b []byte = oc.Inbuf[:]       // buffer to parse
-	var p int                        // position in buffer
-	var c byte                       // current char at p
-	var l OcItem                     // current parses
-	var rawB uint64                  // raw boundary
-	var gotSep, gotItem, gotRaw bool // separator seen, new Item, raw
-	var gotQuote, gotCom bool        // ordinary key, Comment
-	noTypes := oc.NoTypes            // wholesale knobs
-	rawThre := oc.RawThreshold       // 0 allows for binary raw, 255 off
-	withMet := !oc.NoMetas           //
-	linC := oc.linePragmas.lpchar    // line pragmas table
+	var nowStage, fromStage pStage // parse stages
+	var afterS, lastP int          // position markers
+	var culint LintFL              // current line ambigs
+	var ln uint32 = 1              // current line №
+	var items []OcItem             // items found
+	var lapses []OcLint            // ambigs found
+	var b []byte = oc.Inbuf[:]     // buffer to parse
+	var p int                      // position in buffer
+	var c byte                     // current char at p
+	var l OcItem                   // current parses
+	var rawB uint64                // raw boundary
+	var gotSep, gotItem bool       // separator seen, new Item
+	var gotCom, gotRaw bool        // ordinary key, Comment
+	var gotQuote bool              // ordinary key
+	noTypes := oc.NoTypes          // wholesale knobs
+	withMet := !oc.NoMetas         //
+	LapsesFound := oc.LapsesFound  //
+	linC := oc.linePragmas.lpchar  // line pragmas table
 
 	blen := len(b)                 // buflen is used more than once
 	if blen < 2 || blen > u32max { // nothing to parse, or too much
-		oc.LapsesFound++
+		LapsesFound++
 		oc.Lapses = append(oc.Lapses, OcLint{0, LintBadBufLen})
 		return
 	}
@@ -115,18 +116,18 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				gotItem = true
 				gotQuote = true
 				continue
+			case c == '\n': // skip empty lines
+				continue
 			case isStructureLint(c, oc):
 				l.Fl |= IsSpec
 				fallthrough
-			case c > 0x2f: // Got to name's first
+			case c > 0x2f || c|1 == 0x29: // Got to name's first ||()
 				if c < 0x3a && c > 0x2f { // ascii digit
-					l.Fl |= IsOrd
+					l.Fl |= IsOrd | IsIndex
 				}
 				l.Ns = uint32(p)
 				nowStage = inName
 				gotItem = true
-				continue
-			case c == '\n': // skip empty lines
 				continue
 			default: // line comment or line pragma.
 				if c > 0x23 && linC != 0 {
@@ -174,7 +175,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				l.Ve = uint32(p + 1) // buffer:  :⬩$   : ⬩$   : .⬩$
 				break
 			case c == '=' && b[p+2] == '=' &&
-				b[p+3] < 0x21 && oc.AllowRaw: // here blen-p >= 4
+				b[p+3] < 0x21: // here blen-p >= 4
 				gotRaw = true
 				l.Vs = uint32(p + 1)
 				break
@@ -192,7 +193,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			} else { // NAV item
 				l.Ne = uint32(lastP + 1)
 			}
-			if !gotQuote && l.Ne > 0 && isStructure(b[l.Ne-1]) {
+			if !gotQuote && l.Ne > 0 && isStructureLint(b[l.Ne-1], oc) {
 				l.Fl |= IsSpec
 			}
 			gotSep = true
@@ -201,13 +202,14 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			l = OcItem{}
 			gotItem = true
 			gotCom = true
-			oc.LapsesFound++
+			LapsesFound++
 			lapses = append(lapses, OcLint{ln, culint | LintCtlChars}) // store
 			culint = 0
 			continue
 		case registerItem:
 			nowStage = lpCheck
 			gotItem = false
+			gotQuote = false
 			if !gotSep {
 				if !gotCom { // lint free comments
 					culint |= LintNoComment
@@ -371,15 +373,15 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 					rawB = rawBoundary
 				}
 				var x uint64
-				g := p + 1 // b[p]==0x10 ???
+				g := p + 1 // p is at \n
+				bin := oc.AllowBinRaw
 				for g < blen {
 					c = b[g]
 					switch {
 					case c == 0x0a:
 						ln++
-					case c == 0x0d:
-					case c < rawThre:
-						oc.LapsesFound++
+					case bin, c > 0x1f, c == 0x09, c == 0x0d:
+					default:
 						oc.BadLint = OcLint{ln, LintCtlChars}
 						return false
 					}
@@ -392,7 +394,6 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 					g++
 				}
 				if blen-g < 8 { // no boundary found, FATAL
-					oc.LapsesFound++
 					oc.BadLint = OcLint{ln, LintNoBoundary}
 					return false
 				}
@@ -401,11 +402,11 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				for g < blen { // move to the next line
 					if b[g] == 0x0a {
 						ln++
-						p = g
 						break
 					}
 					g++
 				}
+				p = g
 			} // if gotRaw block
 			if culint != 0 { // store linted
 				lapses = append(lapses, OcLint{ln, culint})
@@ -418,8 +419,9 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 	}
 	oc.Items = items
 	oc.Lapses = lapses
+	oc.LapsesFound = LapsesFound
 	if gotItem && !gotCom { // someone forgot to press RETURN
-		oc.LapsesFound++
+		LapsesFound++
 		oc.BadLint = OcLint{ln, LintBadEndLin}
 		return false
 	}

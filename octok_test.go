@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// go test -coverprofile=octok.cover && go tool cover -html=octok.cover
+
 const tConf string = `
 %oconf hints line is first
 ! " / are comment lines
@@ -238,8 +240,27 @@ func TestLinterRestricted(t *testing.T) {
 	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])|", "])"}); ok {
 		t.Errorf("Bad. Linter setup succeeded while it should NOT! (| in metas set)")
 	}
-	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "-+a"}); ok {
-		t.Errorf("Bad. Linter setup succeeded while it should NOT! (letter in Vspecials set)")
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+a="}); ok {
+		t.Errorf("Bad. Linter setup succeeded while it should NOT! (letter in Specials set)")
+	}
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+++++++++"}); ok {
+		t.Errorf("Bad. Linter setup succeeded while it should NOT! (too long Vspecials set)")
+	}
+	oc = OcFlat{}
+	oc.Inbuf = []byte("name + :\n")
+	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 || len(oc.Items) != 1 {
+		t.Errorf("Bad. Added special test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
+	} else if oc.Items[0].Fl&IsSpec != 0 {
+		t.Errorf("Bad. Char + should NOT be Special but it was! [%s]", oc.Items[0].Fl.StrAll())
+	}
+	oc = OcFlat{}
+	oc.Inbuf = []byte("name + :\n")
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+"}); !ok {
+		t.Errorf("Bad. Added Special + setup unexpectedly failed!")
+	} else if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 || len(oc.Items) != 1 {
+		t.Errorf("Bad. Added + special test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
+	} else if oc.Items[0].Fl&IsSpec == 0 {
+		t.Errorf("Bad. Char + should now be Special but it was NOT! [%s]", oc.Items[0].Fl.StrAll())
 	}
 }
 
@@ -280,6 +301,15 @@ func TestTokenizeKnobs(t *testing.T) {
 	}
 	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 1 {
 		t.Errorf("Bad. '<tag>. pragma should NOT lint with NoMetas set but it did! [G:%d]", oc.LapsesFound)
+	}
+	oc = OcFlat{}
+	oc.AllowBinRaw = true
+	oc.Inbuf = []byte("name :== \n raw \v value. ==RawEnd verical tab should now pass\n")
+	if ok := oc.Tokenize(); !ok || oc.LapsesFound != 0 {
+		t.Errorf("Bad. :== raw. pragma should parse with AllowBinRaw but it did not! [G:%d]", oc.LapsesFound)
+	}
+	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 {
+		t.Errorf("Bad. :== raw. pragma should lint with AllowBinRaw but it did not! [G:%d]", oc.LapsesFound)
 	}
 }
 
@@ -389,8 +419,6 @@ func TestJustTokenize(t *testing.T) {
 			t.Errorf("Bad 'from' in %d '%s' [%s]", tn, tv.desc, rerr)
 		}
 		oc.LintFull = true
-		oc.AllowRaw = true
-		oc.RawThreshold = 0x20 // no control
 		ok = oc.Tokenize()
 		if !ok {
 			rerr = oc.BadLint.What.StrAll()
@@ -416,7 +444,7 @@ func TestJustTokenize(t *testing.T) {
 		case !ok && pl != tv.lint:
 			t.Logf("Bad Last line in %d '%s' [%s m:p %s]",
 				tn, tv.desc, tv.lint.StrAll(), pl.StrAll())
-			tv.fl |= Modified
+			// tv.fl |= Modified
 		}
 		switch {
 		case ipa != int(tv.pres): // lines parsed do not match
@@ -494,8 +522,6 @@ func TestLintTokenize(t *testing.T) {
 			t.Errorf("Bad 'from' in %d '%s' [%s]", tn, tv.desc, rerr)
 		}
 		oc.LintFull = true
-		oc.AllowRaw = true
-		oc.RawThreshold = 0x20 // no control
 		ok = TokenizeLint(&oc)
 		if !ok {
 			rerr = oc.BadLint.What.StrAll()
@@ -521,7 +547,7 @@ func TestLintTokenize(t *testing.T) {
 		case !ok && pl != tv.lint:
 			t.Logf("Bad Last line in %d '%s' [%s m:p %s]",
 				tn, tv.desc, tv.lint.StrAll(), pl.StrAll())
-			tv.fl |= Modified
+			// tv.fl |= Modified
 		}
 		switch {
 		case ipa != int(tv.pres): // lines parsed do not match

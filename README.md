@@ -11,8 +11,8 @@ OCONF simply delivers on all unfulfilled promises of YAML.
 
 Oconf uses colon as key/value separator. Instead of quoting and escaping every
 key and every value, OCONF uses a few digraphs, called "pragmas", put after the
-value string if -- and only **if** -- the Value needs some special treatment. 
-Like **`\t`**  unescaping. See below.
+value string if -- **and only if** -- the Value needs some special treatment. 
+Like `\t` unescaping. See below.
 
 
 ### Sample config, annotated. (Copied from OCONF's spec):
@@ -47,17 +47,17 @@ Like **`\t`**  unescaping. See below.
        Имя : Юрий                   // OConf supports utf-8 encoded unicode
        键k : v值                    // in full range. [And 8bit "codepages" too].
 
- ^^ SubDict : --------------------- // Show other structure constructs. These 
-   'nodict { :                      // ' makes key ordinary "nodict {" 
+ ^^ SubTrees : -------------------- // Show other structure constructs. These 
   dictname { : dict opens           // SHOULD NOT be used in human editable
         some : value                // configs.
+     'nodict { :                    // ' makes key ordinary "nodict {" 
     listname [ : list opens         // Ordered (unnamed) values can be indexed 
                : list member 0      // naturally by the order of apperance
            33  : list member 33     // or with index being given explicit
                < : anon set opens   // <set> is now at index 34
                  : with unnamed    
              and : with named members 
-        deepdict { : even with a dict 
+        deepdict { : even with another dict 
               deep : value here  // /OthSect/SubDict/listname/34/deepdict/deep/
                  } : deep dict closes
                > : set closes
@@ -66,13 +66,13 @@ Like **`\t`**  unescaping. See below.
        other : value
            } : dict closes
 
- ^^ PGroups : --------------------- // :( Group applies a pragma to many items
-   tx1 ( group pragma ^+.           // Put ^+. on every line till group ends.
-       : many lines may come here
-       :  that keep indent line but
-       :  sometimes need to be disa
-       : mbiguated for // or ?.     '.
-       ) group ends
+ ^^ PGroups : --------------------- // ( Group applies a pragma to many items
+   tx1 ( : group pragma ^+.         // Put ^+. on every line till group ends.
+         : many lines may come here
+         :  that keep indent line but
+         :  sometimes need to be disa
+         : mbiguated for // or ?.     '.
+       ) : group ends
 
   tx2 :== xHereRaw // block of raw text follows.             
        Now multiline text can span many lines. It ends at the boundary
@@ -103,12 +103,13 @@ Then make symbols for tests:
 % cd $GOPATH/github.com/ohir/octok
 % go generate
 
-% go test # should pass ok
+% go test -cover # should pass 100% ok
 ```
 
 ### Revisions
 
-  - v1.0.0 - public release
+  - v0.2.0 - public preview release
+  - v1.0.0 - BAD TAG on an initial version, fixed to 0.1.0
   - noversion, based on an old C/perl code.
 
 
