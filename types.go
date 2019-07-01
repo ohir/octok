@@ -13,6 +13,7 @@ type OcFlat struct {
 	ItemsExpected uint32     // default 64
 	LapsesFound   uint32     // lints counter, incemented even if LintFull is false
 	LintFull      bool       // register lints. Otherwise just up LapsesFound.
+	AllowBinRaw   bool       // allow binary raw values, otherwise just \t\n\r\del
 	NoTypes       bool       // disallow all type chars: - * ~ , $ # ? "
 	NoMetas       bool       // disallow all metas:  @…; =…/ (…) […] {…} <…>
 	Pck           uint64     // reference linter must be configurable
@@ -76,16 +77,20 @@ const (
 
 //
 
+// const SECT_LEAD keeps a character that is used as a Section marker.
+const SectLead byte = '^'
+const SectLeadEx byte = '@'
+
 // parser stages
 type pStage byte
 
 const (
-	lpCheck pStage = iota // keep lpCheck = 0
-	inName
-	ckSEP
-	inValue
-	badChar
-	registerItem
+	lpCheck      pStage = 0 // order matters so better not use iota
+	inName       pStage = 1
+	ckSEP        pStage = 2
+	inValue      pStage = 3
+	registerItem pStage = 4
+	badChar      pStage = 15
 )
 
 // do not change ItemFlags, test table got most of it as 0xXX.
@@ -94,6 +99,9 @@ const (
 // The OcItem.Fl (flags) field uses below constants:
 type ItemFL byte
 
+// ItemFlags conveys information about an Item. Take note, that Tokenize()
+// does NOT recognize config's structure - it merely flags special names.
+// Also dealing with explicit INDEX (all digits name) is left to the parser.
 const ( // ItemFlags
 	NoneF    ItemFL = 0   // Nothing special.         A straight "name : value" item.
 	IsOrd    ItemFL = 1   // ORD (ordered, not named) value.         " : value" item.
@@ -102,8 +110,8 @@ const ( // ItemFlags
 	NextMeta ItemFL = 8   // %. pragma sets this.
 	Unescape ItemFL = 16  // \. pragma sets this.
 	Backtick ItemFL = 32  // `. pragma sets this.
-	IsSpec   ItemFL = 64  // Value is a single char of <[({})]> set, or is many >>>s.
-	Modified ItemFL = 128 // User code can flag an item as externally modified.
+	IsSpec   ItemFL = 64  // Name starts with a character of >[({})]< set
+	IsIndex  ItemFL = 128 // Name starts with an ascii digit
 )
 
 // Linter recognized ambigous constructs are given as err-flags.
@@ -125,6 +133,7 @@ const (
 	LintKeyParts   LintFL = (1 << iota) >> 1 // Name has more than 4 parts or last part starts too far (>31).
 	LintBadEndLin  LintFL = (1 << iota) >> 1 // No NL at the end of buffer. Last line had not registered.
 	LintBadBufLen  LintFL = (1 << iota) >> 1 // Buffer is too short or too long to parse.
+	LintNoBoundary LintFL = (1 << iota) >> 1 // RawEnd boundary could NOT be found!
 	LintUnknown    LintFL = (1 << iota) >> 1 // Test suite sentinel. Keep it at last entry.
 )
 
@@ -150,6 +159,7 @@ func LintMessage(l LintFL) (r string) {
 		`Name has more than 4 parts or last part starts too far (>31).`,
 		`No NL at the end of buffer. Last line had not registered.`,
 		`Buffer is too short or too long to parse.`,
+		`RawEnd boundary could NOT be found!`,
 		`Test suite sentinel. Keep it at last entry.`,
 	} // yank constants, paste, vselect then: s#^.\+// #`# | '<,'>s#$#`,#
 	if l == 0 {
@@ -257,8 +267,7 @@ const (
 	pragmaChars uint64 = 0x5f60255c2b5e7c27 // _ ` % \ + ^ | '
 	typeChars   uint64 = 0x2d2a7e2c24233f22 // - * ~ , $ # ? "
 	metaChars   uint64 = 0x00007d295d3e2f3b // } ) ] > / ;
-	specVaChars uint64 = 0x7b7d28293c3e5b5d // {} () <> []
-	specSetupCk uint64 = 0x000000007d295d3e // } ) ] >
+	rawBoundary uint64 = 0x3d3d526177456e64 // ==RawEnd
 )
 
 const u32max = (1 << 32) - 1

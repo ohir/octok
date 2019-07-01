@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// go test -coverprofile=octok.cover && go tool cover -html=octok.cover
+
 const tConf string = `
 %oconf hints line is first
 ! " / are comment lines
@@ -238,8 +240,27 @@ func TestLinterRestricted(t *testing.T) {
 	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])|", "])"}); ok {
 		t.Errorf("Bad. Linter setup succeeded while it should NOT! (| in metas set)")
 	}
-	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", ";)"}); ok {
-		t.Errorf("Bad. Linter setup succeeded while it should NOT! (; in Vspecials set)")
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+a="}); ok {
+		t.Errorf("Bad. Linter setup succeeded while it should NOT! (letter in Specials set)")
+	}
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+++++++++"}); ok {
+		t.Errorf("Bad. Linter setup succeeded while it should NOT! (too long Vspecials set)")
+	}
+	oc = OcFlat{}
+	oc.Inbuf = []byte("name + :\n")
+	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 || len(oc.Items) != 1 {
+		t.Errorf("Bad. Added special test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
+	} else if oc.Items[0].Fl&IsSpec != 0 {
+		t.Errorf("Bad. Char + should NOT be Special but it was! [%s]", oc.Items[0].Fl.StrAll())
+	}
+	oc = OcFlat{}
+	oc.Inbuf = []byte("name + :\n")
+	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+"}); !ok {
+		t.Errorf("Bad. Added Special + setup unexpectedly failed!")
+	} else if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 || len(oc.Items) != 1 {
+		t.Errorf("Bad. Added + special test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
+	} else if oc.Items[0].Fl&IsSpec == 0 {
+		t.Errorf("Bad. Char + should now be Special but it was NOT! [%s]", oc.Items[0].Fl.StrAll())
 	}
 }
 
@@ -280,6 +301,15 @@ func TestTokenizeKnobs(t *testing.T) {
 	}
 	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 1 {
 		t.Errorf("Bad. '<tag>. pragma should NOT lint with NoMetas set but it did! [G:%d]", oc.LapsesFound)
+	}
+	oc = OcFlat{}
+	oc.AllowBinRaw = true
+	oc.Inbuf = []byte("name :== \n raw \v value. ==RawEnd verical tab should now pass\n")
+	if ok := oc.Tokenize(); !ok || oc.LapsesFound != 0 {
+		t.Errorf("Bad. :== raw. pragma should parse with AllowBinRaw but it did not! [G:%d]", oc.LapsesFound)
+	}
+	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 {
+		t.Errorf("Bad. :== raw. pragma should lint with AllowBinRaw but it did not! [G:%d]", oc.LapsesFound)
 	}
 }
 
@@ -352,8 +382,8 @@ func TestPragmaCall(t *testing.T) {
 	}
 }
 
-func TestTokenize(t *testing.T) {
-	//func TestXXX(t *testing.T) {
+func TestJustTokenize(t *testing.T) {
+	// func TestXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
 	var erta []string
@@ -374,6 +404,10 @@ func TestTokenize(t *testing.T) {
 		if tv.desc[0] == '!' {            // skip this
 			t.Logf("Warning!\n!desc is set on %d '%s'. This test was skipped!", tn, tv.desc)
 			continue
+		}
+		if tv.desc[0] == '-' { // thats the end
+			t.Logf("Warning!\n-desc is set on %d '%s'. All other tests were skipped!", tn, tv.desc)
+			break
 		}
 		if len(tv.from) != len(tv.mock) {
 			t.Errorf("Bad test %d '%s'", tn, tv.desc)
@@ -410,7 +444,7 @@ func TestTokenize(t *testing.T) {
 		case !ok && pl != tv.lint:
 			t.Logf("Bad Last line in %d '%s' [%s m:p %s]",
 				tn, tv.desc, tv.lint.StrAll(), pl.StrAll())
-			tv.fl |= Modified
+			// tv.fl |= Modified
 		}
 		switch {
 		case ipa != int(tv.pres): // lines parsed do not match
@@ -455,7 +489,7 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
-func TestTokenizeLint(t *testing.T) {
+func TestLintTokenize(t *testing.T) {
 	//func TestLintXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
@@ -513,7 +547,7 @@ func TestTokenizeLint(t *testing.T) {
 		case !ok && pl != tv.lint:
 			t.Logf("Bad Last line in %d '%s' [%s m:p %s]",
 				tn, tv.desc, tv.lint.StrAll(), pl.StrAll())
-			tv.fl |= Modified
+			// tv.fl |= Modified
 		}
 		switch {
 		case ipa != int(tv.pres): // lines parsed do not match
@@ -576,9 +610,9 @@ func TestRangeChecks(t *testing.T) {
 		}
 	}
 	for c := byte(1); c != 0; c++ {
-		tok, lint := isValueSpecial(c), isValueSpecLint(c, &oc)
+		tok, lint := isStructure(c), isStructureLint(c, &oc)
 		if tok != lint {
-			t.Errorf("[%02x] isValueSpecial Tok:%v != Lint(%v)\n", c, tok, lint)
+			t.Errorf("[%02x] isStructure Tok:%v != Lint(%v)\n", c, tok, lint)
 		}
 	}
 	// isValueSpecLint
