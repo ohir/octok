@@ -48,6 +48,7 @@ Like **`\t`**  unescaping. See below.
        键k : v值                    // in full range. [And 8bit "codepages" too].
 
  ^^ SubDict : --------------------- // Show other structure constructs. These 
+   'nodict { :                      // ' makes key ordinary "nodict {" 
   dictname { : dict opens           // SHOULD NOT be used in human editable
         some : value                // configs.
     listname [ : list opens         // Ordered (unnamed) values can be indexed 
@@ -73,14 +74,12 @@ Like **`\t`**  unescaping. See below.
        : mbiguated for // or ?.     '.
        ) group ends
 
-  tx2 := raw lines follow             
-       Now multiline text can span many lines until 
-       Disambiguated group can not be indented though, so all these
-       lines start with 7 spaces now.
-       Beware! line pragmas (like dot-include) still may work in the
-       grouped 'free' text, as line-pragmas might be recognized
-       out-of-band or even before parsing.
-      :- // raw lines block ends
+  tx2 :== xHereRaw // block of raw text follows.             
+       Now multiline text can span many lines. It ends at the boundary
+       string that is provided after the :== marker. Custom boundary
+       string must have at least 8 bytes and only 8 bytes of it matters.
+       If custom is not given, boundary string defaults to ==RawEnd.
+       Now, anything from x of xHereRaw to the end of line is a comment.
 ```
 
 [More about OCONF](https://github.com/ohir/oconf-std)

@@ -352,7 +352,7 @@ func TestPragmaCall(t *testing.T) {
 	}
 }
 
-func TestTokenize(t *testing.T) {
+func TestJustTokenize(t *testing.T) {
 	// func TestXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
@@ -461,7 +461,7 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
-func TestTokenizeLint(t *testing.T) {
+func TestLintTokenize(t *testing.T) {
 	//func TestLintXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool

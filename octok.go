@@ -93,16 +93,6 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 				l.Ve = 0 // no pragmas in remark allowed
 			}
 		case inName: // split name on dots and spaces
-			if !gotQuote && isStructure(c) {
-				l.Fl |= IsSpec
-				lastP = p
-				for c == b[p] {
-					p++
-				}
-				p--
-				afterS = p
-				c = '^'
-			}
 			if l.Np&NpOverParts != 0 || p-int(l.Ns) > 31 {
 				culint |= LintKeyParts
 				continue // more than 3 or part starts at offset > 31
@@ -117,8 +107,6 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 			switch c {
 			case '.':
 				l.Np |= uint16(p - int(l.Ns) + 1)
-			case '^':
-				l.Np |= uint16(lastP - int(l.Ns))
 			default:
 				l.Np |= uint16(p - int(l.Ns))
 			}
@@ -211,6 +199,9 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 				l.Fl |= IsOrd
 			} else { // NAV item
 				l.Ne = uint32(lastP + 1)
+			}
+			if !gotQuote && l.Ne > 0 && isStructure(b[l.Ne-1]) {
+				l.Fl |= IsSpec
 			}
 			gotSep = true
 			nowStage = inValue
