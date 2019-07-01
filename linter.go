@@ -121,7 +121,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			case isStructureLint(c, oc):
 				l.Fl |= IsSpec
 				fallthrough
-			case c > 0x2f || c|1 == 0x29: // Got to name's first ||()
+			case c > 0x2f: // Got to name's first
 				if c < 0x3a && c > 0x2f { // ascii digit
 					l.Fl |= IsOrd | IsIndex
 				}
@@ -429,11 +429,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 } // func TokenizeLint(oc *Parser) (ok bool)
 
 func isStructureLint(c byte, oc *OcFlat) bool {
-	if c == '^' || c == '@' || // section always
-		c == '(' || c == ')' || // group
-		c == '[' || c == ']' || // list
-		c == '{' || c == '}' || // dict
-		c == '<' || c == '>' { //  set
+	if isStructure(c) {
 		return true
 	}
 	i := oc.Sck // additional structure|special chars

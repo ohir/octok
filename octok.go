@@ -128,7 +128,7 @@ func (oc *OcFlat) Tokenize() (ok bool) {
 			case isStructure(c):
 				l.Fl |= IsSpec
 				fallthrough
-			case c > 0x2f || c|1 == 0x29: // name's first ||()
+			case c > 0x2f: // name's first
 				if c < 0x3a && c > 0x2f { // ascii digit
 					l.Fl |= IsOrd | IsIndex
 				}

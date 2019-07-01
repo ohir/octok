@@ -47,17 +47,28 @@ Like `\t` unescaping. See below.
        Имя : Юрий                   // OConf supports utf-8 encoded unicode
        键k : v值                    // in full range. [And 8bit "codepages" too].
 
- ^^ SubTrees : -------------------- // Show other structure constructs. These 
-  dictname { : dict opens           // SHOULD NOT be used in human editable
-        some : value                // configs.
-     'nodict { :                    // ' makes key ordinary "nodict {" 
+ ^^ PGroups : --------------------- // ( Group applies a pragma to many items
+    ( : group pragma ^+.            // Put ^+. on every line till group ends.
+      : many lines may come here
+      :  that keep indent line but
+      :  sometimes need to be disa
+      : mbiguated for // or ?.  '.  // Here sum of pragmas applies: '^+.
+      : 
+    ) : group ends                  // Bracket can have a value or pragma, too.
+
+ ^^ SubTrees : -------------------- // Show other structure constructs.
+  dictname { : dict opens           // These SHOULD NOT be used
+        some : value                // in human __editable__ configs.
+     'nodict { :                    // 'disa makes key ordinary: "nodict {" 
     listname [ : list opens         // Ordered (unnamed) values can be indexed 
                : list member 0      // naturally by the order of apperance
            33  : list member 33     // or with index being given explicit
                < : anon set opens   // <set> is now at index 34
                  : with unnamed    
              and : with named members 
-        deepdict { : even with another dict 
+            '33  : 33 is a string not an index due to opening 'disa
+            ''7  : '7 is a two characters string
+        deepdict { : dictionary in a set, looked up by its name
               deep : value here  // /OthSect/SubDict/listname/34/deepdict/deep/
                  } : deep dict closes
                > : set closes
@@ -66,23 +77,16 @@ Like `\t` unescaping. See below.
        other : value
            } : dict closes
 
- ^^ PGroups : --------------------- // ( Group applies a pragma to many items
-   tx1 ( : group pragma ^+.         // Put ^+. on every line till group ends.
-         : many lines may come here
-         :  that keep indent line but
-         :  sometimes need to be disa
-         : mbiguated for // or ?.     '.
-       ) : group ends
-
-  tx2 :== xHereRaw // block of raw text follows.             
-       Now multiline text can span many lines. It ends at the boundary
-       string that is provided after the :== marker. Custom boundary
-       string must have at least 8 bytes and only 8 bytes of it matters.
-       If custom is not given, boundary string defaults to ==RawEnd.
-       Now, anything from x of xHereRaw to the end of line is a comment.
+ ^^ Raw Multiline ----------------- // :== makes a raw block to the VALUE
+  mtx :== xHereRaw // block of raw text follows.             
+      Now multiline text can span many lines. It ends at the boundary
+      string that is provided after the :== marker. Custom boundary
+      string must have at least 8 bytes and only 8 bytes of it matters.
+      If custom is not given, boundary string defaults to ==RawEnd.
+      Now, anything from x of xHereRaw to the end of line is a comment.
 ```
 
-[More about OCONF](https://github.com/ohir/oconf-std)
+[More about OCONF](https://github.com/ohir/oconf-std-outdated)
 
 ### Package Documentation
 
