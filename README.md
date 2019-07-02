@@ -31,7 +31,8 @@ Like `\t` unescaping. See below.
            :  many lines and   +.   //      next line value 
            :: still keep indent.    // ::  separator makes leading space more visible.
 
-  ^^ SubSec : --------------------- // ^^  open subsection at depth 2 (^^ or ^2 or ^).
+  ^^ SubSec : --------------------- // ^^  open subsection at depth 2.
+                                    //     ----- in value above is just a decoration
             : list member  0        //     Ordered (unnamed) values can be indexed 
             : list member  1        //     naturally by the order of apperance
         33  : list member 33        //     or with index being given explicit
@@ -49,9 +50,9 @@ Like `\t` unescaping. See below.
 
  ^^ PGroups : --------------------- // ( Group applies a pragma to many items
     ( : group pragma ^+.            // Put ^+. on every line till group ends.
-      : many lines may come here
-      :  that keep indent line but
-      :  sometimes need to be disa
+      : many lines may come here    //  Eglible are metas and pragmas + \ ` ^. 
+      :  that keep indent line but  //  | ' % can not be grouped. 
+      :  sometimes need to be disa  //
       : mbiguated for // or ?.  '.  // Here sum of pragmas applies: '^+.
       : 
     ) : group ends                  // Bracket can have a value or pragma, too.

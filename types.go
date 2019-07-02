@@ -253,13 +253,16 @@ type LpCallParam = interface{}
 //
 type LpHandler func(pch byte, oc *OcFlat, fpar interface{}) (ok bool)
 
-// This struct helps to keep testing and using parametrized linter sane.
+// This struct is used as a parameter to the LinterSetup. fine-tune the Linter.
 // 		type LiPrCh = LinterPragmaChars // yet better alias it in your test code.
+// P, T, M are used to shrink the sets (restrict to the ones given).
+// S adds up to 8 characters treated as Special key markers. It may use
+// any but letter character.
 type LinterPragmaChars struct {
 	P string // Pragma characters: _ ` % \ + ^ | '
 	T string //   Type characters: - * ~ , $ # ? "
 	M string //   Meta characters: } ) ] > / ; fill END chars only!
-	S string //    Special values: } ) ] >     fill END chars only!
+	S string //    Added Specials: none
 }
 
 // Characters recognized as per FULL oconf spec.
