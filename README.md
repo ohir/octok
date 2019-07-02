@@ -113,6 +113,7 @@ Then make symbols for tests:
 
 ### Revisions
 
+  - v0.3.0 - Fixed support for TAB whitespace
   - v0.2.0 - public preview release
   - v1.0.0 - BAD TAG on an initial version, fixed to 0.1.0
   - noversion, based on an old C/perl code.
