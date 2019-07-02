@@ -12,7 +12,7 @@ OCONF simply delivers on all unfulfilled promises of YAML.
 Oconf uses colon as key/value separator. Instead of quoting and escaping every
 key and every value, OCONF uses a few digraphs, called "pragmas", put after the
 value string if -- **and only if** -- the Value needs some special treatment. 
-Like `\t` unescaping. See below.
+Like `\v` or `\x07` unescaping. See below.
 
 
 ### Sample config, annotated. (Copied from OCONF's spec):
@@ -20,12 +20,13 @@ Like `\t` unescaping. See below.
 ```
 // line comment can also begin with " # ! (d-quote, sharp and bang) markers.
  ! free comment lines are possible too - these may not contain ' : ' though.
+ # Note that in real configs pragmas and annotations are very rare.
 
  ^ Section : ----- section lead --- //  ^  is a "section" marker and depth indicator. 
  '^ escape : not a section lead     // '   at start makes any key valid and ordinary.
     spaced :  val & spaces     |.   //  |  "guard pragma" keeps tail blanks intact.
     noComm : hello // there    '.   //  '  "disa  pragma" makes former // to the Value
-   withCTL : Use\t tab and \n  \.   //  \  "unesc pragma" unescapes \t, \n, and \xHH
+   withCTL : Use\v vtab and \n \.   //  \  "unesc pragma" unescapes control characters
     withNL : some value        ^.   //  ^  "newline pragma" adds a '\n' at the end.
     looong : value can span    +.   //  +  "join Pragma" joins this line value with
            :  many lines and   +.   //      next line value 
