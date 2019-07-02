@@ -53,6 +53,18 @@ package octok
 // change flag +/- 1 to fail and you can see how a given test string parsed
 var ttableFirstItem = 56        // sync it for accurate test error messages
 var tokTestTable = []ptestItem{ // desc, Fl, Tt, Np, pResult / from / mock
+	{`ctl leads name`, NoneF, 0x00, 0x0000, LintCtlChars, ParseOK,
+		"\tName : Value$Name : Value$",
+		"              N  n : V   v^"},
+	{`ctl in name`, NoneF, 0x00, 0x0000, LintCtlChars, ParseOK,
+		"Na\tme : Value$Name : Value$",
+		"              N  n : V   v^"},
+	{`ctl in value`, NoneF, 0x00, 0x0000, LintCtlChars, ParseOK,
+		"Name : Va\tlue$Name : Value$",
+		"              N  n : V   v^"},
+	{`! OUTctl in value`, NoneF, 0x00, 0x0000, LintCtlChars, ParseNone,
+		"Name : Va\tlue$",
+		"N  n : V    v^"},
 	{`^Utf8 Supermix with two rems and two metas`, NextCont | Backtick, 0x00, 0x0000, LintOK, Parsed2,
 		"k : v //rem ^  🁩λϕ🂊🁾Σbuξ℉⇶av⸨ : ⸩𐌓ar𐌕ó𐌁𐌅兄 `+@内ꜸԳՔЖ№;<żó丶ć>. //remarkø",
 		"               𝑁··𝜋𝜋·  ·‾‾  ↤ : ↳𝜋  𝜋·𝜋𝜋ｖ P M＿‾···‾  ··＿·  ^        ·"},

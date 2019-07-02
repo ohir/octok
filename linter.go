@@ -48,13 +48,13 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 		switch { // loop tight on uninteresting bytes
 		case c == 0x20 || c == 0x0d:
 			continue
+		case (c < 0x20 && c != 0x0a) || c == 0x7f:
+			nowStage = badChar
+			break
 		case !gotItem:
 			break
 		case c == 0x0a:
 			nowStage = registerItem
-		case c < 0x20 || c == 0x7f:
-			nowStage = badChar
-			break
 		case gotCom:
 			continue
 		case p-afterS == 1 && c != 0x2e:
@@ -200,6 +200,8 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			nowStage = inValue
 		case badChar:
 			l = OcItem{}
+			gotSep = false
+			gotQuote = false
 			gotItem = true
 			gotCom = true
 			LapsesFound++
