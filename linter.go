@@ -46,11 +46,11 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 	for ; p < blen; p++ {
 		c = b[p]
 		switch { // loop tight on uninteresting bytes
-		case c == 0x20 || c == 0x0d:
+		case c == 0x20 || c == 0x09 || c == 0x0d:
 			continue
 		case (c < 0x20 && c != 0x0a) || c == 0x7f:
-			nowStage = badChar
-			break
+			oc.BadLint = OcLint{ln, LintCtlChars}
+			return false
 		case !gotItem:
 			break
 		case c == 0x0a:
@@ -76,7 +76,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			switch {
 			case blen-p < 2:
 				break
-			case c == '/' && b[p+1] == '/' && b[p-1] == ' ':
+			case c == '/' && b[p+1] == '/' && (b[p-1] == ' ' || b[p-1] == '\t'):
 				l.Ve = uint32(p) // Keep at slash position.
 			case b[p+1] < 0x21 && lintIsPragmaChar(b[p-1], true, oc):
 				l.Pe = uint32(p)
@@ -170,7 +170,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 		case ckSEP:
 			c = b[p+1]
 			switch {
-			case c < 0x20, blen-p < 4: // got empty value
+			case (c < 0x20 && c != 0x09), blen-p < 4: // got empty value
 				l.Vs = uint32(p + 1) // blen-p: 3210  43210  543210
 				l.Ve = uint32(p + 1) // buffer:  :⬩$   : ⬩$   : .⬩$
 				break
@@ -179,8 +179,8 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 				gotRaw = true
 				l.Vs = uint32(p + 1)
 				break
-			case c == 0x20,
-				c == ':' && b[p+2] == ' ':
+			case c == 0x20, c == 0x09,
+				c == ':' && (b[p+2] == ' ' || b[p+2] == '\t'):
 				l.Vs = uint32(p + 2)
 				break
 			default:
@@ -198,16 +198,6 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			}
 			gotSep = true
 			nowStage = inValue
-		case badChar:
-			l = OcItem{}
-			gotSep = false
-			gotQuote = false
-			gotItem = true
-			gotCom = true
-			LapsesFound++
-			lapses = append(lapses, OcLint{ln, culint | LintCtlChars}) // store
-			culint = 0
-			continue
 		case registerItem:
 			nowStage = lpCheck
 			gotItem = false
@@ -260,11 +250,11 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 			pragmaBack:
 				for ; i >= l.Vs; i-- {
 					c = b[i]
-					if c != ' ' && !lintIsPragmaChar(c, false, oc) { // no meta here
+					if (c != ' ' && c != '\t') && !lintIsPragmaChar(c, false, oc) { // no meta here
 						break
 					}
 					switch c {
-					case ' ': // space is the only valid start of a pragma chain
+					case ' ', '\t': // space is the only valid start of a pragma chain
 						l.Ps = i + 1
 						break pragmaBack
 					case '_': // filler
@@ -328,7 +318,7 @@ func TokenizeLint(oc *OcFlat) (ok bool) {
 					}
 				} // pragmaBack loop
 
-				if c != ' ' { // pragma (chain) must start with a space.
+				if c != ' ' && c != '\t' { // pragma (chain) must start with a space.
 					if i < l.Vs && lintIsPragmaChar(c, true, oc) { // even lone pragma
 						l.Ps = l.Vs
 						l.Ve = l.Vs
