@@ -79,13 +79,12 @@ Like `\v` or `\x07` unescaping. See below.
        other : value
            } : dict closes
 
- ^^ Raw Multiline ----------------- // :== makes a raw block to the VALUE
-  mtx :== xHereRaw // block of raw text follows.             
-      Now multiline text can span many lines. It ends at the boundary
-      string that is provided after the :== marker. Custom boundary
-      string must have at least 8 bytes and only 8 bytes of it matters.
-      If custom is not given, boundary string defaults to ==RawEnd.
-      Now, anything from x of xHereRaw to the end of line is a comment.
+ ^^ Raw Multiline :   // Use :==    
+  mtx :== xHereRaw    // below multiline block will be a VALUE of mtx. 
+      This^^^^^^^^ is a custom boundary string. It must have at least
+      8 bytes and exactly 8 bytes of it matters. If no custom boundary
+      given (or it is too short), the ==RawEnd default one is used.
+      Here block ends at a space before the x of xHereRaw.
 ```
 
 [More about OCONF](https://github.com/ohir/oconf-std-outdated)
