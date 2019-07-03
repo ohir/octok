@@ -90,7 +90,6 @@ const (
 	ckSEP        pStage = 2
 	inValue      pStage = 3
 	registerItem pStage = 4
-	badChar      pStage = 15
 )
 
 // do not change ItemFlags, test table got most of it as 0xXX.

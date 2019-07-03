@@ -244,27 +244,24 @@ func TestLinterRestricted(t *testing.T) {
 		t.Errorf("Bad. Linter setup succeeded while it should NOT! (letter in Specials set)")
 	}
 	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+++++++++"}); ok {
-		t.Errorf("Bad. Linter setup succeeded while it should NOT! (too long Vspecials set)")
+		t.Errorf("Bad. Linter setup succeeded while it should NOT! (too long KSpecials set)")
 	}
-	oc = OcFlat{}
-	oc.Inbuf = []byte("name + :\n")
+	Reset(&oc, []byte("name + :\n"), true)
 	if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 || len(oc.Items) != 1 {
-		t.Errorf("Bad. Added special test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
+		t.Errorf("Bad. Added KSpecial test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
 	} else if oc.Items[0].Fl&IsSpec != 0 {
-		t.Errorf("Bad. Char + should NOT be Special but it was! [%s]", oc.Items[0].Fl.StrAll())
+		t.Errorf("Bad. Char + should NOT be KSpecial but it was! [%s]", oc.Items[0].Fl.StrAll())
 	}
-	oc = OcFlat{}
-	oc.Inbuf = []byte("name + :\n")
+	Reset(&oc, []byte("name + :\n"), true)
 	if ok := LinterSetup(&oc, LinterPragmaChars{"_`%+|'", "$#?", ">])", "+"}); !ok {
-		t.Errorf("Bad. Added Special + setup unexpectedly failed!")
+		t.Errorf("Bad. Added KSpecial + setup unexpectedly failed!")
 	} else if ok := TokenizeLint(&oc); !ok || oc.LapsesFound != 0 || len(oc.Items) != 1 {
-		t.Errorf("Bad. Added + special test should parse and lint but it did NOT! [G:%d]", oc.LapsesFound)
+		t.Errorf("Bad. Added + KSpecial test should lint but it did NOT! [G:%d]", oc.LapsesFound)
 	} else if oc.Items[0].Fl&IsSpec == 0 {
-		t.Errorf("Bad. Char + should now be Special but it was NOT! [%s]", oc.Items[0].Fl.StrAll())
+		t.Errorf("Bad. Char + should now be KSpecial but it was NOT! [%s]", oc.Items[0].Fl.StrAll())
 	}
 }
 
-// TODO make this to table
 func TestTokenizeKnobs(t *testing.T) {
 	var oc OcFlat
 	oc.NoTypes = true
@@ -383,7 +380,6 @@ func TestPragmaCall(t *testing.T) {
 }
 
 func TestJustTokenize(t *testing.T) {
-	// func TestXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
 	var erta []string
@@ -490,7 +486,6 @@ func TestJustTokenize(t *testing.T) {
 }
 
 func TestLintTokenize(t *testing.T) {
-	//func TestLintXXX(t *testing.T) {
 	var oc OcFlat
 	var bad bool
 	var erta []string
@@ -591,7 +586,7 @@ func TestLintTokenize(t *testing.T) {
 	}
 }
 
-// test if base Tokenize and linting/simpified versions are in sync.
+// test if base Tokenize and linting/simplfied versions are in sync.
 func TestRangeChecks(t *testing.T) {
 	var oc OcFlat
 	oc.Inbuf = []byte(" n : v \n")

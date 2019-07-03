@@ -4,6 +4,28 @@
 
 package octok
 
+// func Reset is a testing helper. Exported for use with external lints.
+// It clears OcFlat's result fields and sets new buffer from the buffer
+// given but it does not touch knobs like line-pragmas and recognized
+// pragma/structure sets unless told to do so by the all:true.
+func Reset(oc *OcFlat, newbuf []byte, all bool) {
+	oc.LapsesFound = 0
+	oc.Items = nil  // release early as we may further
+	oc.Lapses = nil // pressure TokenizeLint with GBytes of input
+	oc.BadLint = OcLint{}
+	if newbuf != nil {
+		oc.Inbuf = []byte(newbuf)
+	}
+	if all {
+		oc.linePragmas = lpDispatch{}
+		oc.Pck = 0
+		oc.Sck = 0
+		oc.Mck = 0
+		oc.Tck = 0
+	}
+	return
+}
+
 // func TokenizeLint is a reference tokenizer and linter. Unlike Tokenize
 // method, its linting is fully customizable, ie. it allows to restrict
 // set of value pragmas to exact subset used by a particular implementation;
