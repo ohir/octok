@@ -87,7 +87,7 @@ Like `\v` or `\x07` unescaping. See below.
       Here block ends at a space before the x of xHereRaw.
 ```
 
-[More about OCONF](https://github.com/ohir/oconf-std-outdated)
+[More about OCONF](https://github.com/ohir/oconf-std)
 
 ### Package Documentation
 
