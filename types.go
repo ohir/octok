@@ -102,38 +102,38 @@ type ItemFL byte
 // does NOT recognize config's structure - it merely flags special names.
 // Also dealing with explicit INDEX (all digits name) is left to the parser.
 const ( // ItemFlags
-	NoneF    ItemFL = 0   // Nothing special.         A straight "name : value" item.
-	IsOrd    ItemFL = 1   // ORD (ordered, not named) value.         " : value" item.
-	IsEmpty  ItemFL = 2   // Value is empty.                 "name : " or " : " item.
-	NextCont ItemFL = 4   // +. pragma sets this
-	NextMeta ItemFL = 8   // %. pragma sets this.
-	Unescape ItemFL = 16  // \. pragma sets this.
-	Backtick ItemFL = 32  // `. pragma sets this.
-	IsSpec   ItemFL = 64  // Name starts with a character of >[({})]< set
-	IsIndex  ItemFL = 128 // Name starts with an ascii digit
+	IsOrd    ItemFL = 1 << iota // ORD (ordered, not named) value.         " : value" item.
+	IsEmpty                     // Value is empty.                 "name : " or " : " item.
+	NextCont                    // +. pragma sets this
+	NextMeta                    // %. pragma sets this.
+	Unescape                    // \. pragma sets this.
+	Backtick                    // `. pragma sets this.
+	IsSpec                      // Name starts with a character of >[({})]< set
+	IsIndex                     // Name starts with an ascii digit
+	NoneF    ItemFL = 0         // Nothing special.         A straight "name : value" item.
 )
 
 // Linter recognized ambigous constructs are given as err-flags.
 type LintFL uint32
 
 const (
-	LintOK         LintFL = (1 << iota) >> 1 // Linted OK.
-	LintSusPragma  LintFL = (1 << iota) >> 1 // Unconfirmed pragma spotted. Use '. next time.
-	LintRemCancel  LintFL = (1 << iota) >> 1 // Pragma other than '. or |. cancelled endline remark.
-	LintNoComment  LintFL = (1 << iota) >> 1 // Garbage text (or not marked comment) was skipped.
-	LintDublCaret  LintFL = (1 << iota) >> 1 // Non consecutive carets given. These must be grouped.
-	LintTooManyNL  LintFL = (1 << iota) >> 1 // More than 63 carets was seen in pragma.
-	LintTypeAndNL  LintFL = (1 << iota) >> 1 // Type char and ^ was given in single pragma.
-	LintTwoJoins   LintFL = (1 << iota) >> 1 // Join pragmas % and + given together. Thats impossible.
-	LintManyTypes  LintFL = (1 << iota) >> 1 // More than one type character given.
-	LintCtlChars   LintFL = (1 << iota) >> 1 // Ascii control characters spotted.
-	LintBadLnPrag  LintFL = (1 << iota) >> 1 // Line pragma returned with error.
-	LintBufCorrupt LintFL = (1 << iota) >> 1 // Line pragma corrupted buffer. Can not proceed.
-	LintKeyParts   LintFL = (1 << iota) >> 1 // Name has more than 4 parts or last part starts too far (>31).
-	LintBadEndLin  LintFL = (1 << iota) >> 1 // No NL at the end of buffer. Last line had not registered.
-	LintBadBufLen  LintFL = (1 << iota) >> 1 // Buffer is too short or too long to parse.
-	LintNoBoundary LintFL = (1 << iota) >> 1 // RawEnd boundary could NOT be found!
-	LintUnknown    LintFL = (1 << iota) >> 1 // Test suite sentinel. Keep it at last entry.
+	LintSusPragma  LintFL = 1 << iota // Unconfirmed pragma spotted. Use '. next time.
+	LintRemCancel                     // Pragma other than '. or |. cancelled endline remark.
+	LintNoComment                     // Garbage text (or not marked comment) was skipped.
+	LintDublCaret                     // Non consecutive carets given. These must be grouped.
+	LintTooManyNL                     // More than 63 carets was seen in pragma.
+	LintTypeAndNL                     // Type char and ^ was given in single pragma.
+	LintTwoJoins                      // Join pragmas % and + given together. Thats impossible.
+	LintManyTypes                     // More than one type character given.
+	LintCtlChars                      // Ascii control characters spotted.
+	LintBadLnPrag                     // Line pragma returned with error.
+	LintBufCorrupt                    // Line pragma corrupted buffer. Can not proceed.
+	LintKeyParts                      // Name has more than 4 parts or last part starts too far (>31).
+	LintBadEndLin                     // No NL at the end of buffer. Last line had not registered.
+	LintBadBufLen                     // Buffer is too short or too long to parse.
+	LintNoBoundary                    // RawEnd boundary could NOT be found!
+	LintUnknown                       // Test suite sentinel. Keep it at last entry.
+	LintOK         LintFL = 0         // Linted OK.
 )
 
 // You need to manual update (f LintFL) Msg() method after adding a flag.
@@ -160,7 +160,10 @@ func LintMessage(l LintFL) (r string) {
 		`Buffer is too short or too long to parse.`,
 		`RawEnd boundary could NOT be found!`,
 		`Test suite sentinel. Keep it at last entry.`,
-	} // yank constants, paste, vselect then: s#^.\+// #`# | '<,'>s#$#`,#
+	}
+	// yank constants, paste, vselect from 1 then: s#^.\+// #`# | '<,'>s#$#`,#
+	// mind Linted OK position is at 0!
+
 	if l == 0 {
 		return mt[0]
 	}
